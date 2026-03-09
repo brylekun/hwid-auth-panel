@@ -45,6 +45,7 @@ export default function LicensesTable({ licenses, showSensitive }: Props) {
     <section className={styles.surface}>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Licenses</h2>
+        <span className={styles.metaPill}>{filtered.length} items</span>
       </div>
       <div className={styles.controlRow}>
         <input

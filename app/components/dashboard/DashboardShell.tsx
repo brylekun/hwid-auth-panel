@@ -7,6 +7,7 @@ import AuthLogsTable from './AuthLogsTable';
 import DevicesTable from './DevicesTable';
 import LicensesTable from './LicensesTable';
 import OverviewCards from './OverviewCards';
+import TrendWidgets from './TrendWidgets';
 import styles from './dashboard.module.css';
 import type { AuthLogRow, DeviceRow, LicenseRow } from './types';
 
@@ -58,8 +59,13 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
     <main className={styles.page}>
       <header className={styles.hero}>
         <div>
+          <p className={styles.eyebrow}>Admin Workspace</p>
           <h1 className={styles.heroTitle}>HWID Control Center</h1>
           <p className={styles.heroSubtitle}>Manage licenses, device bindings, and validation activity.</p>
+          <div className={styles.heroMeta}>
+            <span className={styles.metaPill}>Session Protected</span>
+            <span className={styles.metaPill}>Live Inventory: {totals.devices}</span>
+          </div>
         </div>
         <div className={styles.toolbar}>
           <button className={styles.btnGhost} onClick={() => setShowSensitive((prev) => !prev)}>
@@ -76,6 +82,8 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
         totalDevices={totals.devices}
         recentLogs={totals.logs}
       />
+
+      <TrendWidgets licenses={licenses} logs={logs} />
 
       <LicensesTable licenses={licenses} showSensitive={showSensitive} />
 
