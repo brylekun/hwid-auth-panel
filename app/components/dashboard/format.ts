@@ -1,5 +1,25 @@
 export const MANILA_TIMEZONE = 'Asia/Manila';
 
+function parseDateValue(value: string | number | Date) {
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return new Date(value);
+  }
+
+  const text = String(value).trim();
+
+  // Supabase may return UTC timestamps without timezone marker.
+  // Interpret timezone-less date-times as UTC to avoid +8h drift in Manila.
+  if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/.test(text)) {
+    return new Date(text.replace(' ', 'T') + 'Z');
+  }
+
+  return new Date(text);
+}
+
 const manilaDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: MANILA_TIMEZONE,
   year: 'numeric',
@@ -36,7 +56,7 @@ export function formatDateTime(value: string | null) {
     return 'Never';
   }
 
-  const parsed = new Date(value);
+  const parsed = parseDateValue(value);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
@@ -45,7 +65,7 @@ export function formatDateTime(value: string | null) {
 }
 
 export function toManilaDayKey(value: string | number | Date) {
-  const parsed = value instanceof Date ? value : new Date(value);
+  const parsed = parseDateValue(value);
   if (Number.isNaN(parsed.getTime())) {
     return '';
   }
@@ -94,12 +114,12 @@ export function formatLicenseDuration(expiresAt: string | null, createdAt: strin
     return 'Never';
   }
 
-  const expiresMs = new Date(expiresAt).getTime();
+  const expiresMs = parseDateValue(expiresAt).getTime();
   if (Number.isNaN(expiresMs)) {
     return expiresAt;
   }
 
-  const createdMs = createdAt ? new Date(createdAt).getTime() : Number.NaN;
+  const createdMs = createdAt ? parseDateValue(createdAt).getTime() : Number.NaN;
   if (Number.isNaN(createdMs)) {
     return 'Unknown';
   }
@@ -116,7 +136,7 @@ export function getLicenseExpiryInfo(expiresAt: string | null, referenceTime = D
     };
   }
 
-  const expiresMs = new Date(expiresAt).getTime();
+  const expiresMs = parseDateValue(expiresAt).getTime();
   if (Number.isNaN(expiresMs)) {
     return {
       state: 'invalid' as const,
