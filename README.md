@@ -1,8 +1,23 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+HWID panel built with Next.js, hosted on Vercel, and backed by Supabase.
 
 ## Getting Started
 
-First, run the development server:
+1. Create `.env.local`:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+SUPABASE_SECRET_KEY=...
+ADMIN_PANEL_USERNAME=admin
+ADMIN_PANEL_PASSWORD=change-me
+```
+
+2. Apply DB hardening migration in Supabase SQL editor:
+
+```sql
+-- file: supabase/migrations/20260309_hwid_hardening.sql
+```
+
+3. Run the development server:
 
 ```bash
 npm run dev
@@ -14,23 +29,10 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000). Basic Auth credentials are required for `/` and `/api/admin/*`.
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Set the same environment variables in Vercel project settings before deploying.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The auth validation route (`/api/auth/validate`) remains public for your desktop/client app.

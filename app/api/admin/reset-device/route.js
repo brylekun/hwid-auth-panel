@@ -1,16 +1,28 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { basicAuthChallengeHeaders, isAdminBasicAuthValid } from '@/lib/adminAuth';
+import { resetDeviceBodySchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {
   try {
-    const { deviceId } = await req.json();
-
-    if (!deviceId) {
+    if (!isAdminBasicAuthValid(req.headers)) {
       return NextResponse.json(
-        { success: false, message: 'deviceId required' },
+        { success: false, message: 'Unauthorized' },
+        { status: 401, headers: basicAuthChallengeHeaders() }
+      );
+    }
+
+    const body = await req.json();
+    const parsed = resetDeviceBodySchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: parsed.error.issues[0]?.message || 'Invalid request body' },
         { status: 400 }
       );
     }
+
+    const { deviceId } = parsed.data;
 
     const { error } = await supabaseAdmin
       .from('devices')

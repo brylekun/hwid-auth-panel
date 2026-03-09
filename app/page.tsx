@@ -2,6 +2,33 @@ import { getAuthLogs, getDevices, getLicenses } from '@/lib/dashboardData';
 import CreateLicenseForm from './components/CreateLicenseForm';
 import ResetDeviceButton from './components/ResetDeviceButton';
 
+type LicenseRow = {
+  id: string;
+  license_key: string;
+  status: string;
+  max_devices: number;
+  expires_at: string | null;
+  created_at: string;
+};
+
+type DeviceRow = {
+  id: string;
+  hwid_hash: string;
+  device_name: string | null;
+  status: string;
+  first_seen_at: string;
+  last_seen_at: string;
+};
+
+type AuthLogRow = {
+  id: string;
+  license_key: string;
+  hwid_hash: string;
+  result: string;
+  reason: string;
+  created_at: string;
+};
+
 export default async function HomePage() {
   const [licenses, devices, logs] = await Promise.all([
     getLicenses(),
@@ -47,7 +74,7 @@ export default async function HomePage() {
               </tr>
             </thead>
             <tbody>
-              {licenses.map((license: any) => (
+              {licenses.map((license: LicenseRow) => (
                 <tr key={license.id}>
                   <td style={tdStyle}>{license.license_key}</td>
                   <td style={tdStyle}>{license.status}</td>
@@ -76,7 +103,7 @@ export default async function HomePage() {
               </tr>
             </thead>
             <tbody>
-              {devices.map((device: any) => (
+              {devices.map((device: DeviceRow) => (
                 <tr key={device.id}>
                   <td style={tdStyle}>{device.hwid_hash}</td>
                   <td style={tdStyle}>{device.device_name || 'Unknown'}</td>
@@ -107,7 +134,7 @@ export default async function HomePage() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log: any) => (
+              {logs.map((log: AuthLogRow) => (
                 <tr key={log.id}>
                   <td style={tdStyle}>{log.license_key}</td>
                   <td style={tdStyle}>{log.hwid_hash}</td>
