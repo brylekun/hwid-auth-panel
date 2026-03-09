@@ -20,6 +20,8 @@ export default function LicensesTable({
   onLicenseUpdated,
   pushToast,
 }: Props) {
+  const [sortBy, setSortBy] = useState<'license_key' | 'status' | 'max_devices' | 'expires_at' | 'created_at'>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [showSensitive, setShowSensitive] = useState(false);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -27,6 +29,7 @@ export default function LicensesTable({
   const [busyId, setBusyId] = useState('');
   const [actionType, setActionType] = useState<'edit' | 'status' | 'delete' | null>(null);
   const [selected, setSelected] = useState<LicenseRow | null>(null);
+  const [selectedDetails, setSelectedDetails] = useState<LicenseRow | null>(null);
   const [draftKey, setDraftKey] = useState('');
 
   const filtered = useMemo(() => {
@@ -45,9 +48,50 @@ export default function LicensesTable({
     });
   }, [licenses, query, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      let left = '';
+      let right = '';
+
+      if (sortBy === 'max_devices') {
+        return sortDir === 'asc'
+          ? a.max_devices - b.max_devices
+          : b.max_devices - a.max_devices;
+      }
+
+      if (sortBy === 'expires_at') {
+        left = a.expires_at || '';
+        right = b.expires_at || '';
+      } else if (sortBy === 'created_at') {
+        left = a.created_at || '';
+        right = b.created_at || '';
+      } else if (sortBy === 'status') {
+        left = a.status || '';
+        right = b.status || '';
+      } else {
+        left = a.license_key || '';
+        right = b.license_key || '';
+      }
+
+      return sortDir === 'asc'
+        ? left.localeCompare(right)
+        : right.localeCompare(left);
+    });
+  }, [filtered, sortBy, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function toggleSort(column: 'license_key' | 'status' | 'max_devices' | 'expires_at' | 'created_at') {
+    if (sortBy === column) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column);
+    setSortDir('asc');
+  }
 
   function badgeClass(status: string) {
     return `${styles.badge} ${status === 'active' ? styles.active : styles.inactive}`;
@@ -200,24 +244,24 @@ export default function LicensesTable({
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>License Key</th>
-              <th>Status</th>
-              <th>Max Devices</th>
-              <th>Expires At</th>
-              <th>Created At</th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('license_key')}>License Key<span className={styles.sortIndicator}>{sortBy === 'license_key' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('status')}>Status<span className={styles.sortIndicator}>{sortBy === 'status' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('max_devices')}>Max Devices<span className={styles.sortIndicator}>{sortBy === 'max_devices' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('expires_at')}>Expires At<span className={styles.sortIndicator}>{sortBy === 'expires_at' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('created_at')}>Created At<span className={styles.sortIndicator}>{sortBy === 'created_at' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {paged.map((license) => (
-              <tr key={license.id}>
+              <tr key={license.id} onClick={() => setSelectedDetails(license)}>
                 <td>{maskValue(license.license_key, showSensitive)}</td>
                 <td><span className={badgeClass(license.status)}>{license.status}</span></td>
                 <td>{license.max_devices}</td>
                 <td>{formatDateTime(license.expires_at)}</td>
                 <td>{formatDateTime(license.created_at)}</td>
                 <td>
-                  <div className={styles.actionGroup}>
+                  <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
                     <button
                       className={styles.btnGhost}
                       onClick={() => openAction('edit', license)}
@@ -343,6 +387,25 @@ export default function LicensesTable({
             </div>
           </div>
         </div>
+      ) : null}
+      {selectedDetails ? (
+        <>
+          <div className={styles.drawerOverlay} onClick={() => setSelectedDetails(null)} />
+          <aside className={styles.drawerPanel}>
+            <div className={styles.drawerHeader}>
+              <h3 className={styles.drawerTitle}>License Details</h3>
+              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)}>Close</button>
+            </div>
+            <div className={styles.drawerGrid}>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>License Key</p><p className={styles.drawerValue}>{selectedDetails.license_key}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Status</p><p className={styles.drawerValue}>{selectedDetails.status}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Max Devices</p><p className={styles.drawerValue}>{selectedDetails.max_devices}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Expires At</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.expires_at)}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Created At</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.created_at)}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>ID</p><p className={styles.drawerValue}>{selectedDetails.id}</p></div>
+            </div>
+          </aside>
+        </>
       ) : null}
     </section>
   );

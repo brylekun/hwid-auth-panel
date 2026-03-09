@@ -455,6 +455,23 @@
   border-bottom: 1px solid #35526f;
 }
 
+.sortBtn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sortIndicator {
+  opacity: 0.7;
+  font-size: 0.78rem;
+}
+
 .table td {
   padding: 11px 12px;
   border-bottom: 1px solid #1f3347;
@@ -562,6 +579,69 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 11, 19, 0.5);
+  z-index: 110;
+}
+
+.drawerPanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(420px, 92vw);
+  border-left: 1px solid #355270;
+  background:
+    linear-gradient(160deg, rgba(17, 32, 48, 0.98), rgba(10, 20, 33, 0.98)),
+    radial-gradient(circle at 90% 14%, rgba(36, 99, 145, 0.24), transparent 40%);
+  box-shadow: -18px 0 42px rgba(4, 10, 17, 0.55);
+  padding: 16px;
+  z-index: 121;
+  overflow-y: auto;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.drawerTitle {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.drawerGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.drawerItem {
+  border: 1px solid #365575;
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: rgba(17, 32, 49, 0.72);
+}
+
+.drawerLabel {
+  margin: 0 0 4px;
+  color: #96b9dc;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.drawerValue {
+  margin: 0;
+  color: #e4f0ff;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .mobileLabel {

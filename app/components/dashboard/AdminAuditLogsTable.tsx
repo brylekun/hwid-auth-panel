@@ -12,10 +12,13 @@ type Props = {
 const PAGE_SIZE = 10;
 
 export default function AdminAuditLogsTable({ logs }: Props) {
+  const [sortBy, setSortBy] = useState<'admin_username' | 'action_type' | 'target_type' | 'target_value' | 'created_at'>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [showSensitive, setShowSensitive] = useState(false);
   const [query, setQuery] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [selectedDetails, setSelectedDetails] = useState<AdminAuditLogRow | null>(null);
 
   const filtered = useMemo(() => {
     const q = normalize(query);
@@ -42,9 +45,27 @@ export default function AdminAuditLogsTable({ logs }: Props) {
     return Array.from(new Set(logs.map((log) => log.action_type))).sort();
   }, [logs]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const left = String(a[sortBy] || '');
+      const right = String(b[sortBy] || '');
+      return sortDir === 'asc' ? left.localeCompare(right) : right.localeCompare(left);
+    });
+  }, [filtered, sortBy, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function toggleSort(column: 'admin_username' | 'action_type' | 'target_type' | 'target_value' | 'created_at') {
+    if (sortBy === column) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column);
+    setSortDir('asc');
+  }
 
   return (
     <section className={styles.surface}>
@@ -102,16 +123,16 @@ export default function AdminAuditLogsTable({ logs }: Props) {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Admin</th>
-              <th>Action</th>
-              <th>Target Type</th>
-              <th>Target Value</th>
-              <th>Created At</th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('admin_username')}>Admin<span className={styles.sortIndicator}>{sortBy === 'admin_username' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('action_type')}>Action<span className={styles.sortIndicator}>{sortBy === 'action_type' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('target_type')}>Target Type<span className={styles.sortIndicator}>{sortBy === 'target_type' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('target_value')}>Target Value<span className={styles.sortIndicator}>{sortBy === 'target_value' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('created_at')}>Created At<span className={styles.sortIndicator}>{sortBy === 'created_at' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
             </tr>
           </thead>
           <tbody>
             {paged.map((log) => (
-              <tr key={log.id}>
+              <tr key={log.id} onClick={() => setSelectedDetails(log)}>
                 <td>{log.admin_username}</td>
                 <td>{log.action_type}</td>
                 <td>{log.target_type}</td>
@@ -160,6 +181,25 @@ export default function AdminAuditLogsTable({ logs }: Props) {
             Next
           </button>
         </div>
+      ) : null}
+      {selectedDetails ? (
+        <>
+          <div className={styles.drawerOverlay} onClick={() => setSelectedDetails(null)} />
+          <aside className={styles.drawerPanel}>
+            <div className={styles.drawerHeader}>
+              <h3 className={styles.drawerTitle}>Admin Audit Details</h3>
+              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)}>Close</button>
+            </div>
+            <div className={styles.drawerGrid}>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Admin</p><p className={styles.drawerValue}>{selectedDetails.admin_username}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Action</p><p className={styles.drawerValue}>{selectedDetails.action_type}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Target Type</p><p className={styles.drawerValue}>{selectedDetails.target_type}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Target Value</p><p className={styles.drawerValue}>{selectedDetails.target_value || '-'}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Created At</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.created_at)}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Metadata</p><p className={styles.drawerValue}>{JSON.stringify(selectedDetails.metadata || {}, null, 2)}</p></div>
+            </div>
+          </aside>
+        </>
       ) : null}
     </section>
   );

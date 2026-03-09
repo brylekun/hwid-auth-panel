@@ -12,10 +12,13 @@ type Props = {
 const PAGE_SIZE = 10;
 
 export default function AuthLogsTable({ logs }: Props) {
+  const [sortBy, setSortBy] = useState<'license_key' | 'hwid_hash' | 'result' | 'reason' | 'created_at'>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [showSensitive, setShowSensitive] = useState(false);
   const [query, setQuery] = useState('');
   const [resultFilter, setResultFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [selectedDetails, setSelectedDetails] = useState<AuthLogRow | null>(null);
 
   const filtered = useMemo(() => {
     const q = normalize(query);
@@ -37,9 +40,27 @@ export default function AuthLogsTable({ logs }: Props) {
     });
   }, [logs, query, resultFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const left = String(a[sortBy] || '');
+      const right = String(b[sortBy] || '');
+      return sortDir === 'asc' ? left.localeCompare(right) : right.localeCompare(left);
+    });
+  }, [filtered, sortBy, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function toggleSort(column: 'license_key' | 'hwid_hash' | 'result' | 'reason' | 'created_at') {
+    if (sortBy === column) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column);
+    setSortDir('asc');
+  }
 
   function resultClass(result: string) {
     return `${styles.badge} ${result === 'approved' ? styles.active : styles.inactive}`;
@@ -98,16 +119,16 @@ export default function AuthLogsTable({ logs }: Props) {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>License Key</th>
-              <th>HWID Hash</th>
-              <th>Result</th>
-              <th>Reason</th>
-              <th>Created At</th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('license_key')}>License Key<span className={styles.sortIndicator}>{sortBy === 'license_key' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('hwid_hash')}>HWID Hash<span className={styles.sortIndicator}>{sortBy === 'hwid_hash' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('result')}>Result<span className={styles.sortIndicator}>{sortBy === 'result' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('reason')}>Reason<span className={styles.sortIndicator}>{sortBy === 'reason' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('created_at')}>Created At<span className={styles.sortIndicator}>{sortBy === 'created_at' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
             </tr>
           </thead>
           <tbody>
             {paged.map((log) => (
-              <tr key={log.id}>
+              <tr key={log.id} onClick={() => setSelectedDetails(log)}>
                 <td>{maskValue(log.license_key, showSensitive)}</td>
                 <td>{maskValue(log.hwid_hash, showSensitive, 6)}</td>
                 <td><span className={resultClass(log.result)}>{log.result}</span></td>
@@ -154,6 +175,25 @@ export default function AuthLogsTable({ logs }: Props) {
             Next
           </button>
         </div>
+      ) : null}
+      {selectedDetails ? (
+        <>
+          <div className={styles.drawerOverlay} onClick={() => setSelectedDetails(null)} />
+          <aside className={styles.drawerPanel}>
+            <div className={styles.drawerHeader}>
+              <h3 className={styles.drawerTitle}>Auth Log Details</h3>
+              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)}>Close</button>
+            </div>
+            <div className={styles.drawerGrid}>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>License Key</p><p className={styles.drawerValue}>{selectedDetails.license_key}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>HWID Hash</p><p className={styles.drawerValue}>{selectedDetails.hwid_hash}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Result</p><p className={styles.drawerValue}>{selectedDetails.result}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Reason</p><p className={styles.drawerValue}>{selectedDetails.reason}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Created At</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.created_at)}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>ID</p><p className={styles.drawerValue}>{selectedDetails.id}</p></div>
+            </div>
+          </aside>
+        </>
       ) : null}
     </section>
   );

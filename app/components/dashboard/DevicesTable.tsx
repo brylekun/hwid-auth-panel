@@ -15,10 +15,13 @@ type Props = {
 const PAGE_SIZE = 8;
 
 export default function DevicesTable({ devices, onDeviceReset, pushToast }: Props) {
+  const [sortBy, setSortBy] = useState<'hwid_hash' | 'device_name' | 'status' | 'first_seen_at' | 'last_seen_at'>('last_seen_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [showSensitive, setShowSensitive] = useState(false);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [selectedDetails, setSelectedDetails] = useState<DeviceRow | null>(null);
 
   const filtered = useMemo(() => {
     const q = normalize(query);
@@ -36,9 +39,27 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
     });
   }, [devices, query, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const left = String(a[sortBy] || '');
+      const right = String(b[sortBy] || '');
+      return sortDir === 'asc' ? left.localeCompare(right) : right.localeCompare(left);
+    });
+  }, [filtered, sortBy, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function toggleSort(column: 'hwid_hash' | 'device_name' | 'status' | 'first_seen_at' | 'last_seen_at') {
+    if (sortBy === column) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(column);
+    setSortDir('asc');
+  }
 
   function badgeClass(status: string | null) {
     return `${styles.badge} ${status === 'active' ? styles.active : styles.inactive}`;
@@ -97,23 +118,23 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>HWID Hash</th>
-              <th>Device Name</th>
-              <th>Status</th>
-              <th>First Seen</th>
-              <th>Last Seen</th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('hwid_hash')}>HWID Hash<span className={styles.sortIndicator}>{sortBy === 'hwid_hash' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('device_name')}>Device Name<span className={styles.sortIndicator}>{sortBy === 'device_name' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('status')}>Status<span className={styles.sortIndicator}>{sortBy === 'status' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('first_seen_at')}>First Seen<span className={styles.sortIndicator}>{sortBy === 'first_seen_at' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+              <th><button className={styles.sortBtn} onClick={() => toggleSort('last_seen_at')}>Last Seen<span className={styles.sortIndicator}>{sortBy === 'last_seen_at' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {paged.map((device) => (
-              <tr key={device.id}>
+              <tr key={device.id} onClick={() => setSelectedDetails(device)}>
                 <td>{maskValue(device.hwid_hash, showSensitive, 6)}</td>
                 <td>{device.device_name || 'Unknown'}</td>
                 <td><span className={badgeClass(device.status)}>{device.status || 'inactive'}</span></td>
                 <td>{formatDateTime(device.first_seen_at)}</td>
                 <td>{formatDateTime(device.last_seen_at)}</td>
-                <td>
+                <td onClick={(event) => event.stopPropagation()}>
                   <ResetDeviceButton
                     deviceId={device.id}
                     onReset={onDeviceReset}
@@ -158,6 +179,25 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
             Next
           </button>
         </div>
+      ) : null}
+      {selectedDetails ? (
+        <>
+          <div className={styles.drawerOverlay} onClick={() => setSelectedDetails(null)} />
+          <aside className={styles.drawerPanel}>
+            <div className={styles.drawerHeader}>
+              <h3 className={styles.drawerTitle}>Device Details</h3>
+              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)}>Close</button>
+            </div>
+            <div className={styles.drawerGrid}>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>HWID Hash</p><p className={styles.drawerValue}>{selectedDetails.hwid_hash}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Device Name</p><p className={styles.drawerValue}>{selectedDetails.device_name || 'Unknown'}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Status</p><p className={styles.drawerValue}>{selectedDetails.status || 'inactive'}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>First Seen</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.first_seen_at)}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Last Seen</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.last_seen_at)}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>ID</p><p className={styles.drawerValue}>{selectedDetails.id}</p></div>
+            </div>
+          </aside>
+        </>
       ) : null}
     </section>
   );
