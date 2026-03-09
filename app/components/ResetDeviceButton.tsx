@@ -11,10 +11,9 @@ type Props = {
 
 export default function ResetDeviceButton({ deviceId, onReset, pushToast }: Props) {
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function resetDevice() {
-    if (!confirm('Reset this device?')) return;
-
     setLoading(true);
 
     try {
@@ -36,12 +35,33 @@ export default function ResetDeviceButton({ deviceId, onReset, pushToast }: Prop
       pushToast('Network error while resetting device', 'error');
     } finally {
       setLoading(false);
+      setConfirmOpen(false);
     }
   }
 
   return (
-    <button onClick={resetDevice} className={styles.btnGhost} disabled={loading}>
-      {loading ? 'Resetting...' : 'Reset'}
-    </button>
+    <>
+      <button onClick={() => setConfirmOpen(true)} className={styles.btnGhost} disabled={loading}>
+        {loading ? 'Resetting...' : 'Reset'}
+      </button>
+      {confirmOpen ? (
+        <div className={styles.modalOverlay} role="presentation" onClick={() => !loading && setConfirmOpen(false)}>
+          <div className={styles.modalCard} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Reset Device</h3>
+            <p className={styles.modalText}>
+              Remove this device binding from the license? The next validation may bind again if allowed.
+            </p>
+            <div className={styles.modalActions}>
+              <button className={styles.btnGhost} onClick={() => setConfirmOpen(false)} disabled={loading}>
+                Cancel
+              </button>
+              <button className={styles.btnDanger} onClick={resetDevice} disabled={loading}>
+                {loading ? 'Resetting...' : 'Confirm Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

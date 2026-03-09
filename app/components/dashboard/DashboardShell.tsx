@@ -64,7 +64,7 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
       <header className={styles.hero}>
         <div>
           <p className={styles.eyebrow}>Admin Workspace</p>
-          <h1 className={styles.heroTitle}>HWID Control Center</h1>
+          <h1 className={styles.heroTitle}>ThunderTool HWID Panel</h1>
           <p className={styles.heroSubtitle}>Manage licenses, device bindings, and validation activity.</p>
           <div className={styles.heroMeta}>
             <span className={styles.metaPill}>Session Protected</span>

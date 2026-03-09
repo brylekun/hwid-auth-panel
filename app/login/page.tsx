@@ -9,27 +9,32 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = await searchParams;
   const hasConfigError = resolvedSearchParams.error === 'config';
 
-  return (
-    <main className={styles.page}>
-      <section className={styles.shell}>
-        <aside className={styles.showcase}>
-          <p className={styles.eyebrow}>Secure Access</p>
-          <h1 className={styles.title}>HWID License Operations Dashboard</h1>
-          <p className={styles.subtitle}>
-            Centralized control for license management, device bindings, and real-time auth outcomes.
-          </p>
-          <ul className={styles.list}>
-            <li className={styles.item}>Fine-grained device reset controls</li>
-            <li className={styles.item}>Validation logs with quick filtering</li>
-            <li className={styles.item}>Admin session protection with HttpOnly cookies</li>
-          </ul>
-        </aside>
-        <section className={styles.card}>
-          <h2 className={styles.cardTitle}>Admin Sign In</h2>
-          <p className={styles.cardText}>Use your panel credentials to continue.</p>
-          <AdminLoginForm configError={hasConfigError} />
-        </section>
+return (
+  <main className={styles.page}>
+    <section className={styles.shell}>
+      <aside className={styles.showcase}>
+        <p className={styles.eyebrow}>Secure HWID Authentication</p>
+        <h1 className={styles.title}>Thunder Tool HWID Panel</h1>
+        <p className={styles.subtitle}>
+          A centralized management panel for Thunder Tool's ImGui menu authentication system. 
+          Manage licenses, bind hardware IDs, and monitor real-time authorization activity 
+          through a secure and streamlined dashboard.
+        </p>
+        <ul className={styles.list}>
+          <li className={styles.item}>Manage and authorize HWID bindings for Thunder Tool users</li>
+          <li className={styles.item}>Real-time authentication logs and validation monitoring</li>
+          <li className={styles.item}>Secure admin access with protected session management</li>
+        </ul>
+      </aside>
+
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Admin Login</h2>
+        <p className={styles.cardText}>
+          Sign in with your administrator credentials to access the Thunder Tool control panel.
+        </p>
+        <AdminLoginForm configError={hasConfigError} />
       </section>
-    </main>
-  );
+    </section>
+  </main>
+);
 }

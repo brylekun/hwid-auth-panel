@@ -61,15 +61,17 @@ export default function CreateLicensePageForm() {
     <main className={styles.page}>
       <section className={styles.shell}>
         <aside className={styles.showcase}>
-          <p className={styles.eyebrow}>License Studio</p>
-          <h1 className={styles.title}>Issue New HWID License</h1>
+          <p className={styles.eyebrow}>Thunder Tool Licensing</p>
+          <h1 className={styles.title}>Create New HWID License</h1>
           <p className={styles.subtitle}>
-            Create production-ready license keys with limits and optional expiration in one secure flow.
+            Generate secure license keys for Thunder Tool with configurable device limits
+            and optional expiration settings. Manage HWID authentication and control
+            user access to the ImGui menu through a reliable licensing system.
           </p>
           <ul className={styles.tips}>
-            <li className={styles.tip}>Use generated keys to avoid collisions and typo mistakes.</li>
-            <li className={styles.tip}>Set max devices by plan to protect account sharing.</li>
-            <li className={styles.tip}>Use expiry for trials and time-limited subscriptions.</li>
+            <li className={styles.tip}>Generate secure license keys automatically to prevent duplicates and errors.</li>
+            <li className={styles.tip}>Configure maximum HWID bindings to prevent account sharing.</li>
+            <li className={styles.tip}>Set expiration dates for trials, temporary access, or subscription plans.</li>
           </ul>
         </aside>
 
