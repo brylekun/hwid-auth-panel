@@ -509,7 +509,7 @@ export default function LicensesTable({
 
               <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
                 <button
-                  className={styles.btnGhost}
+                  className={`${styles.btnGhost} ${styles.licenseActionEdit}`}
                   onClick={() => openAction('edit', license)}
                   disabled={busyId === license.id}
                   type="button"
@@ -521,7 +521,9 @@ export default function LicensesTable({
                 </button>
 
                 <button
-                  className={styles.btnGhost}
+                  className={`${styles.btnGhost} ${
+                    license.status === 'active' ? styles.licenseActionDeactivate : styles.licenseActionActivate
+                  }`}
                   onClick={() => openAction('status', license)}
                   disabled={busyId === license.id}
                   type="button"
@@ -642,7 +644,12 @@ export default function LicensesTable({
             )}
 
             <div className={styles.modalActions}>
-              <button className={styles.btnGhost} onClick={closeAction} disabled={Boolean(busyId)} type="button">
+              <button
+                className={`${styles.btnGhost} ${actionType === 'edit' ? styles.licenseEditCancelBtn : ''}`}
+                onClick={closeAction}
+                disabled={Boolean(busyId)}
+                type="button"
+              >
                 Cancel
               </button>
 

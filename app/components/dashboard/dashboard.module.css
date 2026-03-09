@@ -1977,3 +1977,125 @@
   margin-top: 6px;
   justify-content: flex-start;
 }
+
+/* UI polish: card glow, badge transitions, subtle texture, improved pagination */
+.licenseCard,
+.metricCard,
+.chartCard,
+.logRow {
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 220ms ease,
+    filter 220ms ease;
+}
+
+.licenseCard:hover,
+.metricCard:hover,
+.chartCard:hover,
+.logRow:hover {
+  box-shadow:
+    0 18px 32px rgba(3, 9, 18, 0.34),
+    0 0 0 1px rgba(145, 173, 225, 0.16),
+    0 0 28px rgba(102, 231, 206, 0.14);
+  filter: brightness(1.03);
+}
+
+.badge {
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.sectionPanel::after,
+.surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.08) 0.5px, transparent 0.5px),
+    radial-gradient(rgba(255, 255, 255, 0.05) 0.5px, transparent 0.5px);
+  background-size: 3px 3px, 4px 4px;
+  background-position: 0 0, 1px 1px;
+  opacity: 0.06;
+}
+
+.pagination {
+  width: fit-content;
+  margin-left: auto;
+  margin-top: 14px;
+  padding: 8px 10px;
+  border: 1px solid rgba(131, 157, 202, 0.26);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(13, 23, 39, 0.82), rgba(9, 16, 29, 0.86));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 12px 24px rgba(4, 10, 21, 0.2);
+}
+
+.pagination span {
+  min-width: 64px;
+  text-align: center;
+  color: #dce8fb;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(123, 149, 194, 0.3);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(14, 25, 42, 0.84);
+}
+
+.pagination .btnGhost {
+  min-width: 68px;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.licenseActionEdit {
+  border-color: rgba(118, 160, 240, 0.46);
+  background: linear-gradient(180deg, rgba(28, 56, 104, 0.86), rgba(19, 38, 74, 0.9));
+  color: #d9e8ff;
+}
+
+.licenseActionEdit:hover {
+  border-color: rgba(145, 185, 255, 0.64);
+  background: linear-gradient(180deg, rgba(34, 68, 124, 0.9), rgba(24, 47, 90, 0.94));
+}
+
+.licenseActionActivate {
+  border-color: rgba(110, 228, 188, 0.46);
+  background: linear-gradient(180deg, rgba(24, 93, 73, 0.88), rgba(17, 69, 54, 0.9));
+  color: #dcfff3;
+}
+
+.licenseActionActivate:hover {
+  border-color: rgba(133, 241, 205, 0.64);
+  background: linear-gradient(180deg, rgba(29, 109, 86, 0.9), rgba(20, 79, 62, 0.94));
+}
+
+.licenseActionDeactivate {
+  border-color: rgba(239, 174, 106, 0.46);
+  background: linear-gradient(180deg, rgba(116, 69, 29, 0.9), rgba(85, 51, 22, 0.92));
+  color: #ffead3;
+}
+
+.licenseActionDeactivate:hover {
+  border-color: rgba(252, 195, 133, 0.66);
+  background: linear-gradient(180deg, rgba(129, 78, 34, 0.92), rgba(97, 58, 26, 0.95));
+}
+
+.licenseEditCancelBtn {
+  border-color: rgba(231, 132, 154, 0.44);
+  background: linear-gradient(180deg, rgba(92, 34, 48, 0.86), rgba(70, 25, 37, 0.9));
+  color: #ffd8e0;
+}
+
+.licenseEditCancelBtn:hover {
+  border-color: rgba(244, 158, 177, 0.62);
+  background: linear-gradient(180deg, rgba(108, 40, 56, 0.9), rgba(80, 28, 42, 0.94));
+}
