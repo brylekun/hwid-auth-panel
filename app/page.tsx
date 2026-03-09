@@ -1,4 +1,5 @@
 import { getAuthLogs, getDevices, getLicenses } from '@/lib/dashboardData';
+import AdminLogoutButton from './components/AdminLogoutButton';
 import CreateLicenseForm from './components/CreateLicenseForm';
 import ResetDeviceButton from './components/ResetDeviceButton';
 
@@ -38,7 +39,10 @@ export default async function HomePage() {
 
   return (
     <main style={{ padding: '24px', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ marginBottom: '24px' }}>HWID Authentication Web Panel</h1>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <h1 style={{ marginBottom: '24px' }}>HWID Authentication Web Panel</h1>
+        <AdminLogoutButton />
+      </header>
 
       <CreateLicenseForm />
 

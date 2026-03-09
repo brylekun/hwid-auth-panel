@@ -9,6 +9,7 @@ NEXT_PUBLIC_SUPABASE_URL=...
 SUPABASE_SECRET_KEY=...
 ADMIN_PANEL_USERNAME=admin
 ADMIN_PANEL_PASSWORD=change-me
+ADMIN_SESSION_SECRET=optional-extra-secret
 ```
 
 2. Apply DB hardening migration in Supabase SQL editor:
@@ -29,7 +30,7 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Basic Auth credentials are required for `/` and `/api/admin/*`.
+Open [http://localhost:3000](http://localhost:3000) and sign in on `/login`. Admin APIs are protected by an HttpOnly session cookie.
 
 ## Deploy on Vercel
 

@@ -1,26 +1,44 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
-  basicAuthChallengeHeaders,
   isAdminAuthConfigured,
-  isAdminBasicAuthValid,
-} from './lib/adminAuth';
+  isAdminSessionFromRequest,
+} from './lib/adminSession';
 
-export function proxy(req: NextRequest) {
-  if (!isAdminAuthConfigured()) {
-    return new NextResponse('Admin auth not configured. Set ADMIN_PANEL_PASSWORD.', {
-      status: 503,
-    });
-  }
+export async function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
 
-  if (isAdminBasicAuthValid(req.headers)) {
+  if (pathname === '/api/admin/login' || pathname === '/api/admin/logout') {
     return NextResponse.next();
   }
 
-  return new NextResponse('Authentication required', {
-    status: 401,
-    headers: basicAuthChallengeHeaders(),
-  });
+  if (!isAdminAuthConfigured()) {
+    if (pathname.startsWith('/api/admin/')) {
+      return NextResponse.json(
+        { success: false, message: 'Admin auth not configured' },
+        { status: 503 }
+      );
+    }
+
+    const loginUrl = new URL('/login', req.url);
+    loginUrl.searchParams.set('error', 'config');
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (await isAdminSessionFromRequest(req)) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith('/api/admin/')) {
+    return NextResponse.json(
+      { success: false, message: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
+  const loginUrl = new URL('/login', req.url);
+  loginUrl.searchParams.set('next', pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {

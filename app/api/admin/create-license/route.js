@@ -1,9 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import {
-  basicAuthChallengeHeaders,
   isAdminAuthConfigured,
-  isAdminBasicAuthValid,
-} from '@/lib/adminAuth';
+  isAdminSessionFromRequest,
+} from '@/lib/adminSession';
 import { createLicenseBodySchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
@@ -16,10 +15,10 @@ export async function POST(req) {
       );
     }
 
-    if (!isAdminBasicAuthValid(req.headers)) {
+    if (!(await isAdminSessionFromRequest(req))) {
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
-        { status: 401, headers: basicAuthChallengeHeaders() }
+        { status: 401 }
       );
     }
 
