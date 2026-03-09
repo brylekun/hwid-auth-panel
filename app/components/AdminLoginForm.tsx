@@ -2,11 +2,17 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { AlertTriangle, Eye, EyeOff, LockKeyhole, ShieldCheck, User } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Eye, EyeOff, LockKeyhole, ShieldCheck, User } from 'lucide-react';
 import styles from '../login/login.module.css';
 
 type Props = {
   configError?: boolean;
+};
+
+type LoginToast = {
+  id: number;
+  message: string;
+  type: 'success' | 'error';
 };
 
 export default function AdminLoginForm({ configError = false }: Props) {
@@ -16,7 +22,17 @@ export default function AdminLoginForm({ configError = false }: Props) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
+  const [toasts, setToasts] = useState<LoginToast[]>([]);
   const [loading, setLoading] = useState(false);
+
+  function pushToast(messageText: string, type: 'success' | 'error') {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    setToasts((prev) => [...prev, { id, message: messageText, type }]);
+
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3200);
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,15 +48,20 @@ export default function AdminLoginForm({ configError = false }: Props) {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setMessage(data.message || 'Login failed');
+        const errorMessage = data.message || 'Login failed';
+        setMessage(errorMessage);
+        pushToast(errorMessage, 'error');
         return;
       }
 
+      pushToast(data.message || 'Login successful', 'success');
       const nextPath = searchParams.get('next') || '/';
+      await new Promise((resolve) => setTimeout(resolve, 700));
       router.replace(nextPath);
       router.refresh();
     } catch {
       setMessage('Network error');
+      pushToast('Network error', 'error');
     } finally {
       setLoading(false);
     }
@@ -133,6 +154,24 @@ export default function AdminLoginForm({ configError = false }: Props) {
           <span>{message}</span>
         </p>
       ) : null}
+
+      <div className={styles.toastViewport} aria-live="polite" aria-atomic="true">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`${styles.toast} ${toast.type === 'success' ? styles.toastSuccess : styles.toastError}`}
+          >
+            <span className={styles.toastIcon}>
+              {toast.type === 'success' ? (
+                <CheckCircle2 size={16} strokeWidth={2} />
+              ) : (
+                <AlertTriangle size={16} strokeWidth={2} />
+              )}
+            </span>
+            <span>{toast.message}</span>
+          </div>
+        ))}
+      </div>
     </form>
   );
 }

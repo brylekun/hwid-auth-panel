@@ -118,7 +118,7 @@ export default function AdminAuditLogsTable({ logs }: Props) {
             className={styles.logRow}
             onClick={() => setSelectedDetails(log)}
           >
-            <span className={`${styles.logDot} ${styles.logDotNeutral}`} aria-hidden="true" />
+            <span className={`${styles.logDot} ${styles.logDotPulse} ${styles.logDotNeutral}`} aria-hidden="true" />
 
             <div className={styles.logMain}>
               <div className={styles.logTop}>
