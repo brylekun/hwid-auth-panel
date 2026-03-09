@@ -1,6 +1,8 @@
 import { getAuthLogs, getDevices, getLicenses } from '@/lib/dashboardData';
 import DashboardShell from './components/dashboard/DashboardShell';
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const [licenses, devices, logs] = await Promise.all([
     getLicenses(),

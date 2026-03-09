@@ -8,14 +8,24 @@ import type { LicenseRow } from './types';
 type Props = {
   licenses: LicenseRow[];
   showSensitive: boolean;
+  onLicenseDeleted: (licenseId: string) => void;
+  onLicenseUpdated: (license: LicenseRow) => void;
+  pushToast: (message: string, type?: 'success' | 'error') => void;
 };
 
 const PAGE_SIZE = 8;
 
-export default function LicensesTable({ licenses, showSensitive }: Props) {
+export default function LicensesTable({
+  licenses,
+  showSensitive,
+  onLicenseDeleted,
+  onLicenseUpdated,
+  pushToast,
+}: Props) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [busyId, setBusyId] = useState('');
 
   const filtered = useMemo(() => {
     const q = normalize(query);
@@ -39,6 +49,68 @@ export default function LicensesTable({ licenses, showSensitive }: Props) {
 
   function badgeClass(status: string) {
     return `${styles.badge} ${status === 'active' ? styles.active : styles.inactive}`;
+  }
+
+  async function updateLicense(licenseId: string, payload: { licenseKey?: string; status?: 'active' | 'inactive' }) {
+    setBusyId(licenseId);
+
+    try {
+      const response = await fetch('/api/admin/update-license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ licenseId, ...payload }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        pushToast(data.message || 'Failed to update license', 'error');
+        return;
+      }
+
+      onLicenseUpdated(data.license);
+      pushToast('License updated');
+    } catch {
+      pushToast('Network error while updating license', 'error');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  async function deleteLicense(licenseId: string) {
+    if (!confirm('Delete this license key?')) {
+      return;
+    }
+
+    setBusyId(licenseId);
+    try {
+      const response = await fetch('/api/admin/delete-license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ licenseId }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        pushToast(data.message || 'Failed to delete license', 'error');
+        return;
+      }
+
+      onLicenseDeleted(licenseId);
+      pushToast('License deleted');
+    } catch {
+      pushToast('Network error while deleting license', 'error');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  function editKey(license: LicenseRow) {
+    const nextKey = prompt('Enter new license key', license.license_key);
+    if (!nextKey || nextKey.trim() === '' || nextKey.trim() === license.license_key) {
+      return;
+    }
+
+    void updateLicense(license.id, { licenseKey: nextKey.trim() });
   }
 
   return (
@@ -80,6 +152,7 @@ export default function LicensesTable({ licenses, showSensitive }: Props) {
               <th>Max Devices</th>
               <th>Expires At</th>
               <th>Created At</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -90,6 +163,35 @@ export default function LicensesTable({ licenses, showSensitive }: Props) {
                 <td>{license.max_devices}</td>
                 <td>{formatDateTime(license.expires_at)}</td>
                 <td>{formatDateTime(license.created_at)}</td>
+                <td>
+                  <div className={styles.actionGroup}>
+                    <button
+                      className={styles.btnGhost}
+                      onClick={() => editKey(license)}
+                      disabled={busyId === license.id}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className={styles.btnGhost}
+                      onClick={() =>
+                        updateLicense(license.id, {
+                          status: license.status === 'active' ? 'inactive' : 'active',
+                        })
+                      }
+                      disabled={busyId === license.id}
+                    >
+                      {license.status === 'active' ? 'Ban' : 'Activate'}
+                    </button>
+                    <button
+                      className={styles.btnDanger}
+                      onClick={() => deleteLicense(license.id)}
+                      disabled={busyId === license.id}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -113,6 +215,33 @@ export default function LicensesTable({ licenses, showSensitive }: Props) {
             <div className={styles.mobileRow}>
               <span className={styles.mobileLabel}>Expires</span>
               <span>{formatDateTime(license.expires_at)}</span>
+            </div>
+            <div className={styles.actionGroup}>
+              <button
+                className={styles.btnGhost}
+                onClick={() => editKey(license)}
+                disabled={busyId === license.id}
+              >
+                Edit
+              </button>
+              <button
+                className={styles.btnGhost}
+                onClick={() =>
+                  updateLicense(license.id, {
+                    status: license.status === 'active' ? 'inactive' : 'active',
+                  })
+                }
+                disabled={busyId === license.id}
+              >
+                {license.status === 'active' ? 'Ban' : 'Activate'}
+              </button>
+              <button
+                className={styles.btnDanger}
+                onClick={() => deleteLicense(license.id)}
+                disabled={busyId === license.id}
+              >
+                Delete
+              </button>
             </div>
           </article>
         ))}

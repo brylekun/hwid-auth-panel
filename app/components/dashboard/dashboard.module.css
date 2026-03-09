@@ -175,6 +175,14 @@
   filter: none;
 }
 
+.btnGhost:disabled,
+.btnDanger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
 .btnGhost {
   border: 1px solid #395675;
   border-radius: 10px;
@@ -189,6 +197,19 @@
   transform: translateY(-1px);
   border-color: #517ea9;
   background: rgba(23, 44, 67, 0.82);
+}
+
+.btnDanger {
+  border: 1px solid #8c4351;
+  border-radius: 10px;
+  padding: 9px 13px;
+  background: rgba(95, 33, 46, 0.66);
+  color: #ffcad2;
+  cursor: pointer;
+}
+
+.btnDanger:hover {
+  filter: brightness(1.06);
 }
 
 .cards {
@@ -382,6 +403,12 @@
   justify-content: space-between;
   gap: 8px;
   font-size: 0.92rem;
+}
+
+.actionGroup {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .mobileLabel {

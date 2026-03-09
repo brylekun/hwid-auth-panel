@@ -24,7 +24,7 @@ type Props = {
 };
 
 export default function DashboardShell({ initialLicenses, initialDevices, initialLogs }: Props) {
-  const [licenses] = useState(initialLicenses);
+  const [licenses, setLicenses] = useState(initialLicenses);
   const [devices, setDevices] = useState(initialDevices);
   const [logs] = useState(initialLogs);
   const [showSensitive, setShowSensitive] = useState(false);
@@ -41,6 +41,14 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
 
   function handleDeviceReset(deviceId: string) {
     setDevices((prev) => prev.filter((device) => device.id !== deviceId));
+  }
+
+  function handleLicenseDeleted(licenseId: string) {
+    setLicenses((prev) => prev.filter((license) => license.id !== licenseId));
+  }
+
+  function handleLicenseUpdated(updated: LicenseRow) {
+    setLicenses((prev) => prev.map((license) => (license.id === updated.id ? updated : license)));
   }
 
   const totals = useMemo(() => {
@@ -82,7 +90,13 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
 
       <TrendWidgets licenses={licenses} logs={logs} />
 
-      <LicensesTable licenses={licenses} showSensitive={showSensitive} />
+      <LicensesTable
+        licenses={licenses}
+        showSensitive={showSensitive}
+        onLicenseDeleted={handleLicenseDeleted}
+        onLicenseUpdated={handleLicenseUpdated}
+        pushToast={pushToast}
+      />
 
       <DevicesTable
         devices={devices}
