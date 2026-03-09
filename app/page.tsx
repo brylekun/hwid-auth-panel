@@ -1,4 +1,5 @@
 import { getAuthLogs, getDevices, getLicenses } from '@/lib/dashboardData';
+import CreateLicenseForm from './components/CreateLicenseForm';
 
 export default async function HomePage() {
   const [licenses, devices, logs] = await Promise.all([
@@ -10,6 +11,8 @@ export default async function HomePage() {
   return (
     <main style={{ padding: '24px', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ marginBottom: '24px' }}>HWID Authentication Web Panel</h1>
+
+      <CreateLicenseForm />
 
       <section style={{ marginBottom: '32px' }}>
         <h2>Overview</h2>
