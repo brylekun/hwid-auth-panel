@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { formatDateTime, formatLicenseDuration, maskValue, normalize } from './format';
+import { formatDateTime, getLicenseExpiryInfo, maskValue, normalize } from './format';
 import styles from './dashboard.module.css';
 import type { LicenseRow } from './types';
 
@@ -13,6 +13,15 @@ type Props = {
 };
 
 const PAGE_SIZE = 8;
+
+function toLocalDateTimeInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
 export default function LicensesTable({
   licenses,
@@ -31,6 +40,7 @@ export default function LicensesTable({
   const [selected, setSelected] = useState<LicenseRow | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<LicenseRow | null>(null);
   const [draftKey, setDraftKey] = useState('');
+  const [draftExpiresAt, setDraftExpiresAt] = useState('');
 
   const filtered = useMemo(() => {
     const q = normalize(query);
@@ -97,7 +107,10 @@ export default function LicensesTable({
     return `${styles.badge} ${status === 'active' ? styles.active : styles.inactive}`;
   }
 
-  async function updateLicense(licenseId: string, payload: { licenseKey?: string; status?: 'active' | 'inactive' }) {
+  async function updateLicense(
+    licenseId: string,
+    payload: { licenseKey?: string; status?: 'active' | 'inactive'; expiresAt?: string | null }
+  ) {
     setBusyId(licenseId);
 
     try {
@@ -146,10 +159,34 @@ export default function LicensesTable({
     }
   }
 
+  async function copyLicenseKey(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      pushToast('License key copied');
+    } catch {
+      pushToast('Failed to copy license key', 'error');
+    }
+  }
+
+  function getExpiryBadgeClass(state: 'active' | 'expired' | 'never' | 'invalid') {
+    if (state === 'active') {
+      return `${styles.badge} ${styles.expiryActive}`;
+    }
+
+    if (state === 'expired') {
+      return `${styles.badge} ${styles.expiryExpired}`;
+    }
+
+    return `${styles.badge} ${styles.expiryNeutral}`;
+  }
+
   function openAction(type: 'edit' | 'status' | 'delete', license: LicenseRow) {
     setActionType(type);
     setSelected(license);
     setDraftKey(license.license_key);
+    setDraftExpiresAt(
+      license.expires_at ? toLocalDateTimeInputValue(new Date(license.expires_at)) : ''
+    );
   }
 
   function closeAction() {
@@ -160,6 +197,22 @@ export default function LicensesTable({
     setActionType(null);
     setSelected(null);
     setDraftKey('');
+    setDraftExpiresAt('');
+  }
+
+  function extendExpiryBy(durationMs: number) {
+    if (!selected) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    const currentExpiryMs = selected.expires_at
+      ? new Date(selected.expires_at).getTime()
+      : Number.NaN;
+    const baseMs = Number.isNaN(currentExpiryMs)
+      ? nowMs
+      : Math.max(currentExpiryMs, nowMs);
+    setDraftExpiresAt(toLocalDateTimeInputValue(new Date(baseMs + durationMs)));
   }
 
   async function confirmAction() {
@@ -169,12 +222,40 @@ export default function LicensesTable({
 
     if (actionType === 'edit') {
       const next = draftKey.trim();
-      if (!next || next === selected.license_key) {
-        pushToast('Enter a different license key', 'error');
+      if (!next) {
+        pushToast('License key cannot be empty', 'error');
         return;
       }
 
-      await updateLicense(selected.id, { licenseKey: next });
+      const payload = {} as { licenseKey?: string; expiresAt?: string | null };
+
+      if (next !== selected.license_key) {
+        payload.licenseKey = next;
+      }
+
+      const originalExpiryMs = selected.expires_at
+        ? new Date(selected.expires_at).getTime()
+        : Number.NaN;
+      const nextExpiryMs = draftExpiresAt ? new Date(draftExpiresAt).getTime() : Number.NaN;
+      const expiryChanged =
+        (selected.expires_at == null && draftExpiresAt !== '') ||
+        (selected.expires_at != null && draftExpiresAt === '') ||
+        (selected.expires_at != null &&
+          draftExpiresAt !== '' &&
+          !Number.isNaN(originalExpiryMs) &&
+          !Number.isNaN(nextExpiryMs) &&
+          Math.abs(originalExpiryMs - nextExpiryMs) >= 60 * 1000);
+
+      if (expiryChanged) {
+        payload.expiresAt = draftExpiresAt || null;
+      }
+
+      if (!payload.licenseKey && payload.expiresAt === undefined) {
+        pushToast('No changes to save', 'error');
+        return;
+      }
+
+      await updateLicense(selected.id, payload);
       closeAction();
       return;
     }
@@ -255,10 +336,45 @@ export default function LicensesTable({
           <tbody>
             {paged.map((license) => (
               <tr key={license.id} onClick={() => setSelectedDetails(license)}>
-                <td>{maskValue(license.license_key, showSensitive)}</td>
+                <td>
+                  <div className={styles.keyCell}>
+                    <span>{maskValue(license.license_key, showSensitive)}</span>
+                    <button
+                      type="button"
+                      className={styles.copyBtn}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void copyLicenseKey(license.license_key);
+                      }}
+                      title="Copy license key"
+                      aria-label="Copy license key"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </td>
                 <td><span className={badgeClass(license.status)}>{license.status}</span></td>
                 <td>{license.max_devices}</td>
-                <td>{formatLicenseDuration(license.expires_at, license.created_at)}</td>
+                <td>
+                  {(() => {
+                    const expiry = getLicenseExpiryInfo(license.expires_at);
+                    return (
+                      <div className={styles.expiryStack}>
+                        <span className={getExpiryBadgeClass(expiry.state)}>
+                          {expiry.state === 'active'
+                            ? 'Active'
+                            : expiry.state === 'expired'
+                              ? 'Expired'
+                              : 'Never'}
+                        </span>
+                        <span className={styles.expiryHint}>{expiry.label}</span>
+                        {expiry.state !== 'never' ? (
+                          <span className={styles.expiryDate}>{expiry.dateLabel}</span>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td>{formatDateTime(license.created_at)}</td>
                 <td>
                   <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
@@ -295,7 +411,18 @@ export default function LicensesTable({
           <article key={license.id} className={styles.mobileCard}>
             <div className={styles.mobileRow}>
               <span className={styles.mobileLabel}>License</span>
-              <span>{maskValue(license.license_key, showSensitive)}</span>
+              <span className={styles.keyCell}>
+                <span>{maskValue(license.license_key, showSensitive)}</span>
+                <button
+                  type="button"
+                  className={styles.copyBtn}
+                  onClick={() => void copyLicenseKey(license.license_key)}
+                  title="Copy license key"
+                  aria-label="Copy license key"
+                >
+                  Copy
+                </button>
+              </span>
             </div>
             <div className={styles.mobileRow}>
               <span className={styles.mobileLabel}>Status</span>
@@ -307,7 +434,23 @@ export default function LicensesTable({
             </div>
             <div className={styles.mobileRow}>
               <span className={styles.mobileLabel}>Expires</span>
-              <span>{formatLicenseDuration(license.expires_at, license.created_at)}</span>
+              <span className={styles.expiryStack}>
+                {(() => {
+                  const expiry = getLicenseExpiryInfo(license.expires_at);
+                  return (
+                    <>
+                      <span className={getExpiryBadgeClass(expiry.state)}>
+                        {expiry.state === 'active'
+                          ? 'Active'
+                          : expiry.state === 'expired'
+                            ? 'Expired'
+                            : 'Never'}
+                      </span>
+                      <span className={styles.expiryHint}>{expiry.label}</span>
+                    </>
+                  );
+                })()}
+              </span>
             </div>
             <div className={styles.actionGroup}>
               <button
@@ -348,7 +491,12 @@ export default function LicensesTable({
       ) : null}
       {selected && actionType ? (
         <div className={styles.modalOverlay} role="presentation" onClick={closeAction}>
-          <div className={styles.modalCard} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+          <div
+            className={`${styles.modalCard} ${actionType === 'edit' ? styles.modalCardEdit : ''}`}
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className={styles.modalTitle}>
               {actionType === 'edit' ? 'Edit License Key' : actionType === 'status'
                 ? selected.status === 'active' ? 'Ban License' : 'Activate License'
@@ -356,13 +504,63 @@ export default function LicensesTable({
             </h3>
             {actionType === 'edit' ? (
               <div className={styles.modalBody}>
-                <p className={styles.modalText}>Update the key for this license entry.</p>
+                <p className={styles.modalText}>Update key and expiry duration for this license.</p>
                 <input
                   className={styles.input}
                   value={draftKey}
                   onChange={(event) => setDraftKey(event.target.value)}
                   autoFocus
                 />
+                <div className={styles.modalSection}>
+                  <p className={styles.modalText}>Current expiry</p>
+                  {(() => {
+                    const expiry = getLicenseExpiryInfo(selected.expires_at);
+                    return (
+                      <div className={styles.expiryStack}>
+                        <span className={getExpiryBadgeClass(expiry.state)}>
+                          {expiry.state === 'active'
+                            ? 'Active'
+                            : expiry.state === 'expired'
+                              ? 'Expired'
+                              : 'Never'}
+                        </span>
+                        <span className={styles.expiryHint}>{expiry.label}</span>
+                        {expiry.state !== 'never' ? (
+                          <span className={styles.expiryDate}>{expiry.dateLabel}</span>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className={styles.modalSection}>
+                  <p className={styles.modalText}>Extend duration</p>
+                  <div className={styles.modalQuickActions}>
+                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(60 * 60 * 1000)}>
+                      +1h
+                    </button>
+                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(24 * 60 * 60 * 1000)}>
+                      +24h
+                    </button>
+                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(7 * 24 * 60 * 60 * 1000)}>
+                      +7d
+                    </button>
+                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(30 * 24 * 60 * 60 * 1000)}>
+                      +30d
+                    </button>
+                    <button type="button" className={styles.btnMini} onClick={() => setDraftExpiresAt('')}>
+                      Never
+                    </button>
+                  </div>
+                </div>
+                <div className={styles.modalSection}>
+                  <p className={styles.modalText}>Set exact expiration</p>
+                  <input
+                    type="datetime-local"
+                    className={styles.input}
+                    value={draftExpiresAt}
+                    onChange={(event) => setDraftExpiresAt(event.target.value)}
+                  />
+                </div>
               </div>
             ) : (
               <p className={styles.modalText}>
@@ -400,7 +598,27 @@ export default function LicensesTable({
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>License Key</p><p className={styles.drawerValue}>{selectedDetails.license_key}</p></div>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>Status</p><p className={styles.drawerValue}>{selectedDetails.status}</p></div>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>Max Devices</p><p className={styles.drawerValue}>{selectedDetails.max_devices}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Expires At</p><p className={styles.drawerValue}>{formatLicenseDuration(selectedDetails.expires_at, selectedDetails.created_at)}</p></div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Expiry</p>
+                {(() => {
+                  const expiry = getLicenseExpiryInfo(selectedDetails.expires_at);
+                  return (
+                    <div className={styles.expiryStack}>
+                      <span className={getExpiryBadgeClass(expiry.state)}>
+                        {expiry.state === 'active'
+                          ? 'Active'
+                          : expiry.state === 'expired'
+                            ? 'Expired'
+                            : 'Never'}
+                      </span>
+                      <span className={styles.expiryHint}>{expiry.label}</span>
+                      {expiry.state !== 'never' ? (
+                        <span className={styles.expiryDate}>{expiry.dateLabel}</span>
+                      ) : null}
+                    </div>
+                  );
+                })()}
+              </div>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>Created At</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.created_at)}</p></div>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>ID</p><p className={styles.drawerValue}>{selectedDetails.id}</p></div>
             </div>

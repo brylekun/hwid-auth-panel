@@ -72,6 +72,16 @@
     linear-gradient(180deg, rgba(14, 24, 37, 0.93), rgba(9, 17, 28, 0.96));
 }
 
+.embedPanel {
+  border: 1px solid #314a61;
+  background:
+    linear-gradient(164deg, rgba(29, 48, 71, 0.64), rgba(12, 22, 35, 0.84)),
+    radial-gradient(circle at 90% 18%, rgba(99, 214, 199, 0.14), transparent 36%);
+  border-radius: 18px;
+  padding: 19px;
+  box-shadow: 0 20px 40px rgba(5, 11, 19, 0.38);
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;

@@ -3,7 +3,11 @@
 import { useRouter } from 'next/navigation';
 import styles from './dashboard/dashboard.module.css';
 
-export default function AdminLogoutButton() {
+type Props = {
+  className?: string;
+};
+
+export default function AdminLogoutButton({ className }: Props) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -20,7 +24,7 @@ export default function AdminLogoutButton() {
   }
 
   return (
-    <button onClick={handleLogout} className={styles.btn}>
+    <button onClick={handleLogout} className={className || styles.btn}>
       Logout
     </button>
   );

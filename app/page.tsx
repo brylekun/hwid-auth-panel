@@ -17,6 +17,7 @@ export default async function HomePage() {
       initialDevices={devices}
       initialLogs={logs}
       initialAdminAuditLogs={adminAuditLogs}
+      view="home"
     />
   );
 }

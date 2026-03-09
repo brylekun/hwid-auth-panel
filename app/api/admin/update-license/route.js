@@ -35,12 +35,12 @@ export async function POST(req) {
       );
     }
 
-    const { licenseId, licenseKey, status } = parsed.data;
+    const { licenseId, licenseKey, status, expiresAt } = parsed.data;
     const adminUsername = await getAdminUsernameFromRequest(req);
 
     const { data: previous, error: previousError } = await supabaseAdmin
       .from('licenses')
-      .select('id, license_key, status')
+      .select('id, license_key, status, expires_at')
       .eq('id', licenseId)
       .maybeSingle();
 
@@ -67,6 +67,10 @@ export async function POST(req) {
 
     if (status) {
       payload.status = status;
+    }
+
+    if (expiresAt !== undefined) {
+      payload.expires_at = expiresAt;
     }
 
     const { data, error } = await supabaseAdmin
@@ -99,10 +103,12 @@ export async function POST(req) {
         previous: {
           licenseKey: previous.license_key,
           status: previous.status,
+          expiresAt: previous.expires_at,
         },
         next: {
           licenseKey: data.license_key,
           status: data.status,
+          expiresAt: data.expires_at,
         },
       },
     });

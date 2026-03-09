@@ -64,21 +64,29 @@ export function formatDurationLabel(ms: number) {
   const day = 24 * hour;
 
   if (absMs < minute) {
-    return '0 min';
+    return '<1 min';
   }
 
   if (absMs < hour) {
-    const minutes = Math.round(absMs / minute);
+    const minutes = Math.floor(absMs / minute);
     return `${minutes} min`;
   }
 
   if (absMs < day) {
-    const hours = Math.round(absMs / hour);
-    return `${hours} hr`;
+    const hours = Math.floor(absMs / hour);
+    const minutes = Math.floor((absMs % hour) / minute);
+    if (minutes === 0) {
+      return `${hours} hr`;
+    }
+    return `${hours} hr ${minutes} min`;
   }
 
-  const days = Math.round(absMs / day);
-  return `${days} day${days === 1 ? '' : 's'}`;
+  const days = Math.floor(absMs / day);
+  const hours = Math.floor((absMs % day) / hour);
+  if (hours === 0) {
+    return `${days} day${days === 1 ? '' : 's'}`;
+  }
+  return `${days} day${days === 1 ? '' : 's'} ${hours} hr`;
 }
 
 export function formatLicenseDuration(expiresAt: string | null, createdAt: string | null) {
@@ -97,6 +105,39 @@ export function formatLicenseDuration(expiresAt: string | null, createdAt: strin
   }
 
   return formatDurationLabel(expiresMs - createdMs);
+}
+
+export function getLicenseExpiryInfo(expiresAt: string | null, referenceTime = Date.now()) {
+  if (!expiresAt) {
+    return {
+      state: 'never' as const,
+      label: 'No expiration',
+      dateLabel: 'Never',
+    };
+  }
+
+  const expiresMs = new Date(expiresAt).getTime();
+  if (Number.isNaN(expiresMs)) {
+    return {
+      state: 'invalid' as const,
+      label: 'Invalid expiration date',
+      dateLabel: expiresAt,
+    };
+  }
+
+  if (expiresMs <= referenceTime) {
+    return {
+      state: 'expired' as const,
+      label: `Expired ${formatDurationLabel(referenceTime - expiresMs)} ago`,
+      dateLabel: formatDateTime(expiresAt),
+    };
+  }
+
+  return {
+    state: 'active' as const,
+    label: `Expires in ${formatDurationLabel(expiresMs - referenceTime)}`,
+    dateLabel: formatDateTime(expiresAt),
+  };
 }
 
 export function normalize(value: string) {

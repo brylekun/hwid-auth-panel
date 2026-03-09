@@ -1,9 +1,9 @@
 import { getAdminAuditLogs, getAuthLogs, getDevices, getLicenses } from '@/lib/dashboardData';
-import DashboardShell from '@/app/components/dashboard/DashboardShell';
+import DashboardShell from '../components/dashboard/DashboardShell';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CreateLicensePage() {
+export default async function DevicesPage() {
   const [licenses, devices, logs, adminAuditLogs] = await Promise.all([
     getLicenses(),
     getDevices(),
@@ -17,7 +17,7 @@ export default async function CreateLicensePage() {
       initialDevices={devices}
       initialLogs={logs}
       initialAdminAuditLogs={adminAuditLogs}
-      view="create-license"
+      view="devices"
     />
   );
 }

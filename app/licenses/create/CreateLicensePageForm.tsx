@@ -7,6 +7,9 @@ import AdminLogoutButton from '@/app/components/AdminLogoutButton';
 import styles from './create-license.module.css';
 
 type ExpiryPreset = '1h' | '24h' | '7d' | '30d' | 'never';
+type Props = {
+  embedded?: boolean;
+};
 
 function generateLicenseKey() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -24,7 +27,7 @@ function toLocalDateTimeInputValue(date: Date) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-export default function CreateLicensePageForm() {
+export default function CreateLicensePageForm({ embedded = false }: Props) {
   const router = useRouter();
   const [licenseKey, setLicenseKey] = useState(generateLicenseKey());
   const [maxDevices, setMaxDevices] = useState(1);
@@ -75,7 +78,7 @@ export default function CreateLicensePageForm() {
         return;
       }
 
-      router.replace('/');
+      router.replace('/licenses');
       router.refresh();
     } catch {
       setMessage('Network error while creating license');
@@ -83,6 +86,82 @@ export default function CreateLicensePageForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (embedded) {
+    return (
+      <section className={styles.embedPanel}>
+        <h2 className={styles.heading}>Create License</h2>
+        <p className={styles.text}>Fill required fields and submit to provision a new license.</p>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <label htmlFor="licenseKey" className={styles.label}>License Key</label>
+            <div className={styles.inline}>
+              <input
+                id="licenseKey"
+                className={styles.input}
+                value={licenseKey}
+                onChange={(event) => setLicenseKey(event.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className={styles.ghostBtn}
+                onClick={() => setLicenseKey(generateLicenseKey())}
+                disabled={loading}
+              >
+                Generate
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <label htmlFor="maxDevices" className={styles.label}>Max Devices</label>
+            <input
+              id="maxDevices"
+              type="number"
+              min={1}
+              max={100}
+              className={styles.input}
+              value={maxDevices}
+              onChange={(event) => setMaxDevices(Number(event.target.value))}
+              required
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label htmlFor="expiresAt" className={styles.label}>Expires At (optional)</label>
+            <div className={styles.presetRow}>
+              <button type="button" className={`${styles.presetBtn} ${selectedPreset === '1h' ? styles.presetBtnActive : ''}`} onClick={() => applyExpiryPreset('1h')} disabled={loading}>1h</button>
+              <button type="button" className={`${styles.presetBtn} ${selectedPreset === '24h' ? styles.presetBtnActive : ''}`} onClick={() => applyExpiryPreset('24h')} disabled={loading}>24h</button>
+              <button type="button" className={`${styles.presetBtn} ${selectedPreset === '7d' ? styles.presetBtnActive : ''}`} onClick={() => applyExpiryPreset('7d')} disabled={loading}>7d</button>
+              <button type="button" className={`${styles.presetBtn} ${selectedPreset === '30d' ? styles.presetBtnActive : ''}`} onClick={() => applyExpiryPreset('30d')} disabled={loading}>30d</button>
+              <button type="button" className={`${styles.presetBtn} ${selectedPreset === 'never' ? styles.presetBtnActive : ''}`} onClick={() => applyExpiryPreset('never')} disabled={loading}>Never</button>
+            </div>
+            <input
+              id="expiresAt"
+              type="datetime-local"
+              className={styles.input}
+              value={expiresAt}
+              onChange={(event) => {
+                setExpiresAt(event.target.value);
+                setSelectedPreset('never');
+              }}
+            />
+          </div>
+
+          <button type="submit" className={styles.submit} disabled={loading}>
+            {loading ? 'Creating...' : 'Create License'}
+          </button>
+
+          {message ? (
+            <p className={`${styles.message} ${messageType === 'success' ? styles.success : styles.error}`}>
+              {message}
+            </p>
+          ) : null}
+        </form>
+      </section>
+    );
   }
 
   return (
