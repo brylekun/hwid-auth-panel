@@ -115,3 +115,63 @@ body::after {
   filter: blur(60px);
   opacity: 0.9;
 }
+
+/* Global button hover baseline */
+:where(
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  a[role="button"]
+) {
+  transition:
+    transform 140ms ease,
+    filter 140ms ease,
+    box-shadow 180ms ease;
+}
+
+:where(
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  a[role="button"]
+):hover:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+  box-shadow: 0 10px 18px rgba(4, 10, 22, 0.2);
+}
+
+:where(
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  a[role="button"]
+):active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    a[role="button"]
+  ) {
+    transition: none;
+  }
+
+  :where(
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    a[role="button"]
+  ):hover:not(:disabled):not([aria-disabled="true"]) {
+    transform: none;
+    filter: none;
+    box-shadow: none;
+  }
+}
