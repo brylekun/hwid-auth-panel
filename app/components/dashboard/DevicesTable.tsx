@@ -10,12 +10,12 @@ type Props = {
   devices: DeviceRow[];
   onDeviceReset: (deviceId: string) => void;
   pushToast: (message: string, type?: 'success' | 'error') => void;
-  showSensitive: boolean;
 };
 
 const PAGE_SIZE = 8;
 
-export default function DevicesTable({ devices, onDeviceReset, pushToast, showSensitive }: Props) {
+export default function DevicesTable({ devices, onDeviceReset, pushToast }: Props) {
+  const [showSensitive, setShowSensitive] = useState(false);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -48,7 +48,26 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast, showSe
     <section className={styles.surface}>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>Devices</h2>
-        <span className={styles.metaPill}>{filtered.length} items</span>
+        <div className={styles.sectionTools}>
+          <span className={styles.metaPill}>{filtered.length} items</span>
+          <button
+            className={styles.eyeBtn}
+            onClick={() => setShowSensitive((prev) => !prev)}
+            title={showSensitive ? 'Hide sensitive data' : 'Show sensitive data'}
+            aria-label={showSensitive ? 'Hide sensitive data' : 'Show sensitive data'}
+          >
+            <svg viewBox="0 0 24 24" className={styles.eyeIcon} aria-hidden="true">
+              <path
+                d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+              <circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              {!showSensitive ? <path d="M4 20L20 4" stroke="currentColor" strokeWidth="1.8" /> : null}
+            </svg>
+          </button>
+        </div>
       </div>
       <div className={styles.controlRow}>
         <input

@@ -24,3 +24,14 @@ export type AuthLogRow = {
   reason: string;
   created_at: string;
 };
+
+export type AdminAuditLogRow = {
+  id: number;
+  admin_username: string;
+  action_type: string;
+  target_type: string;
+  target_id: string | null;
+  target_value: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};

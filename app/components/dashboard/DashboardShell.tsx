@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import AdminLogoutButton from '../AdminLogoutButton';
+import AdminAuditLogsTable from './AdminAuditLogsTable';
 import AuthLogsTable from './AuthLogsTable';
 import DevicesTable from './DevicesTable';
 import LicensesTable from './LicensesTable';
 import OverviewCards from './OverviewCards';
 import TrendWidgets from './TrendWidgets';
 import styles from './dashboard.module.css';
-import type { AuthLogRow, DeviceRow, LicenseRow } from './types';
+import type { AdminAuditLogRow, AuthLogRow, DeviceRow, LicenseRow } from './types';
 
 type Toast = {
   id: number;
@@ -21,13 +22,19 @@ type Props = {
   initialLicenses: LicenseRow[];
   initialDevices: DeviceRow[];
   initialLogs: AuthLogRow[];
+  initialAdminAuditLogs: AdminAuditLogRow[];
 };
 
-export default function DashboardShell({ initialLicenses, initialDevices, initialLogs }: Props) {
+export default function DashboardShell({
+  initialLicenses,
+  initialDevices,
+  initialLogs,
+  initialAdminAuditLogs,
+}: Props) {
   const [licenses, setLicenses] = useState(initialLicenses);
   const [devices, setDevices] = useState(initialDevices);
   const [logs] = useState(initialLogs);
-  const [showSensitive, setShowSensitive] = useState(false);
+  const [adminAuditLogs] = useState(initialAdminAuditLogs);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   function pushToast(message: string, type: 'success' | 'error' = 'success') {
@@ -56,8 +63,9 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
       licenses: licenses.length,
       devices: devices.length,
       logs: logs.length,
+      adminLogs: adminAuditLogs.length,
     };
-  }, [licenses.length, devices.length, logs.length]);
+  }, [licenses.length, devices.length, logs.length, adminAuditLogs.length]);
 
   return (
     <main className={styles.page}>
@@ -75,9 +83,6 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
           <Link href="/licenses/create" className={styles.btnLink}>
             Create License
           </Link>
-          <button className={styles.btnGhost} onClick={() => setShowSensitive((prev) => !prev)}>
-            {showSensitive ? 'Hide Sensitive' : 'Show Sensitive'}
-          </button>
           <AdminLogoutButton />
         </div>
       </header>
@@ -86,13 +91,13 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
         totalLicenses={totals.licenses}
         totalDevices={totals.devices}
         recentLogs={totals.logs}
+        adminLogs={totals.adminLogs}
       />
 
       <TrendWidgets licenses={licenses} logs={logs} />
 
       <LicensesTable
         licenses={licenses}
-        showSensitive={showSensitive}
         onLicenseDeleted={handleLicenseDeleted}
         onLicenseUpdated={handleLicenseUpdated}
         pushToast={pushToast}
@@ -102,10 +107,10 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
         devices={devices}
         onDeviceReset={handleDeviceReset}
         pushToast={pushToast}
-        showSensitive={showSensitive}
       />
 
-      <AuthLogsTable logs={logs} showSensitive={showSensitive} />
+      <AuthLogsTable logs={logs} />
+      <AdminAuditLogsTable logs={adminAuditLogs} showSensitive={false} />
 
       <div className={styles.toastWrap}>
         {toasts.map((toast) => (

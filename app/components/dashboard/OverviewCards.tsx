@@ -4,9 +4,10 @@ type Props = {
   totalLicenses: number;
   totalDevices: number;
   recentLogs: number;
+  adminLogs: number;
 };
 
-export default function OverviewCards({ totalLicenses, totalDevices, recentLogs }: Props) {
+export default function OverviewCards({ totalLicenses, totalDevices, recentLogs, adminLogs }: Props) {
   return (
     <section className={styles.surface}>
       <div className={styles.sectionHeader}>
@@ -27,6 +28,11 @@ export default function OverviewCards({ totalLicenses, totalDevices, recentLogs 
           <p className={styles.metricLabel}>Recent Logs</p>
           <p className={styles.metricValue}>{recentLogs}</p>
           <p className={styles.metricHint}>Latest auth attempts captured</p>
+        </article>
+        <article className={styles.metricCard}>
+          <p className={styles.metricLabel}>Admin Logs</p>
+          <p className={styles.metricValue}>{adminLogs}</p>
+          <p className={styles.metricHint}>Audited admin actions</p>
         </article>
       </div>
     </section>
