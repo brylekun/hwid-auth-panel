@@ -18,13 +18,6 @@ const reasonResponseMap = {
   rate_limited_license: { status: 429, message: 'Too many attempts for this license' },
 };
 
-function isMissingRpcError(error) {
-  return (
-    error?.code === 'PGRST202' ||
-    error?.message?.includes('bind_device_if_allowed')
-  );
-}
-
 function getNumberEnv(name, fallback) {
   const value = Number(process.env[name]);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
@@ -234,10 +227,7 @@ export async function POST(req) {
     let decision = await bindDeviceWithRpc(normalizedLicenseKey, hwidHash, deviceName);
 
     if (decision.error) {
-      if (!isMissingRpcError(decision.error)) {
-        throw decision.error;
-      }
-
+      console.error('RPC bind failed, falling back to legacy flow:', decision.error);
       decision = await legacyBindDevice(normalizedLicenseKey, hwidHash, deviceName);
     }
 
