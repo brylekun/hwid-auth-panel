@@ -149,6 +149,24 @@
   filter: brightness(1.04);
 }
 
+.btnLink {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  border: 1px solid #3e79ad;
+  border-radius: 10px;
+  padding: 9px 13px;
+  background: linear-gradient(180deg, #2f74ae, #225a8b);
+  color: #edf5ff;
+  transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+
+.btnLink:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 18px rgba(19, 58, 92, 0.35);
+  filter: brightness(1.04);
+}
+
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;

@@ -1,8 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import AdminLogoutButton from '../AdminLogoutButton';
-import CreateLicenseForm from '../CreateLicenseForm';
 import AuthLogsTable from './AuthLogsTable';
 import DevicesTable from './DevicesTable';
 import LicensesTable from './LicensesTable';
@@ -24,7 +24,7 @@ type Props = {
 };
 
 export default function DashboardShell({ initialLicenses, initialDevices, initialLogs }: Props) {
-  const [licenses, setLicenses] = useState(initialLicenses);
+  const [licenses] = useState(initialLicenses);
   const [devices, setDevices] = useState(initialDevices);
   const [logs] = useState(initialLogs);
   const [showSensitive, setShowSensitive] = useState(false);
@@ -37,10 +37,6 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
     setTimeout(() => {
       setToasts((prev) => prev.filter((item) => item.id !== toastId));
     }, 3000);
-  }
-
-  function handleCreatedLicense(license: LicenseRow) {
-    setLicenses((prev) => [license, ...prev]);
   }
 
   function handleDeviceReset(deviceId: string) {
@@ -68,14 +64,15 @@ export default function DashboardShell({ initialLicenses, initialDevices, initia
           </div>
         </div>
         <div className={styles.toolbar}>
+          <Link href="/licenses/create" className={styles.btnLink}>
+            Create License
+          </Link>
           <button className={styles.btnGhost} onClick={() => setShowSensitive((prev) => !prev)}>
             {showSensitive ? 'Hide Sensitive' : 'Show Sensitive'}
           </button>
           <AdminLogoutButton />
         </div>
       </header>
-
-      <CreateLicenseForm onCreated={handleCreatedLicense} pushToast={pushToast} />
 
       <OverviewCards
         totalLicenses={totals.licenses}
