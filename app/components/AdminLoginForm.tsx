@@ -2,12 +2,18 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import styles from '../login/login.module.css';
 
-export default function AdminLoginForm() {
+type Props = {
+  configError?: boolean;
+};
+
+export default function AdminLoginForm({ configError = false }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -40,42 +46,51 @@ export default function AdminLoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '12px', maxWidth: '360px' }}>
-      <input
-        type="text"
-        placeholder="Username"
-        value={username}
-        onChange={(event) => setUsername(event.target.value)}
-        style={inputStyle}
-        required
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-        style={inputStyle}
-        required
-      />
-      <button type="submit" style={buttonStyle} disabled={loading}>
-        {loading ? 'Signing in...' : 'Sign in'}
+    <form onSubmit={handleSubmit} className={styles.form}>
+      {configError ? (
+        <p className={styles.configError}>
+          Admin auth is not configured. Set <code>ADMIN_PANEL_PASSWORD</code> in environment variables.
+        </p>
+      ) : null}
+      <div>
+        <label className={styles.label} htmlFor="username">Username</label>
+        <input
+          id="username"
+          type="text"
+          placeholder="Enter admin username"
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          className={styles.input}
+          required
+          autoComplete="username"
+        />
+      </div>
+      <div>
+        <label className={styles.label} htmlFor="password">Password</label>
+        <div className={styles.passwordWrap}>
+          <input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Enter your password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className={styles.input}
+            required
+            autoComplete="current-password"
+          />
+          <button
+            type="button"
+            className={styles.passwordBtn}
+            onClick={() => setShowPassword((prev) => !prev)}
+          >
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
+        </div>
+      </div>
+      <button type="submit" className={styles.submit} disabled={loading}>
+        {loading ? 'Signing in...' : 'Sign In'}
       </button>
-      {message ? <p style={{ color: '#ff9a9a', margin: 0 }}>{message}</p> : null}
+      {message ? <p className={styles.error}>{message}</p> : null}
     </form>
   );
 }
-
-const inputStyle = {
-  padding: '10px',
-  borderRadius: '8px',
-  border: '1px solid #333',
-  background: '#111',
-  color: 'white',
-};
-
-const buttonStyle = {
-  padding: '10px 14px',
-  borderRadius: '8px',
-  border: 'none',
-  cursor: 'pointer',
-};
