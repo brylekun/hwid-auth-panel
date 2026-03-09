@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Cpu, Eye, EyeOff, MoreHorizontal, MonitorSmartphone, RotateCcw, ShieldCheck } from 'lucide-react';
 import ResetDeviceButton from '../ResetDeviceButton';
 import { formatDateTime, normalize } from './format';
 import styles from './dashboard.module.css';
@@ -25,15 +26,12 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
 
   const filtered = useMemo(() => {
     const q = normalize(query);
+
     return devices.filter((device) => {
       const statusMatch = statusFilter === 'all' || (device.status || '').toLowerCase() === statusFilter;
-      if (!statusMatch) {
-        return false;
-      }
+      if (!statusMatch) return false;
 
-      if (!q) {
-        return true;
-      }
+      if (!q) return true;
 
       return normalize(device.hwid_hash).includes(q) || normalize(device.device_name || '').includes(q);
     });
@@ -56,25 +54,30 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
   }
 
   function formatDeviceHwid(value: string, reveal: boolean) {
-    if (reveal) {
-      return value;
-    }
-
-    if (!value) {
-      return 'N/A';
-    }
-
-    if (value.length <= 14) {
-      return `******${value.slice(-6)}`;
-    }
-
+    if (reveal) return value;
+    if (!value) return 'N/A';
+    if (value.length <= 14) return `******${value.slice(-6)}`;
     return `${value.slice(0, 4)}...${value.slice(-6)}`;
+  }
+
+  function compactDate(value: string) {
+    return new Intl.DateTimeFormat('en-PH', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(value));
   }
 
   return (
     <section className={styles.surface}>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Devices</h2>
+        <div>
+          <p className={styles.panelEyebrow}>Hardware bindings</p>
+          <h2 className={styles.sectionTitle}>Devices</h2>
+        </div>
+
         <div className={styles.sectionTools}>
           <span className={styles.metaPill}>{filtered.length} items</span>
           <button
@@ -82,20 +85,13 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
             onClick={() => setShowSensitive((prev) => !prev)}
             title={showSensitive ? 'Hide sensitive data' : 'Show sensitive data'}
             aria-label={showSensitive ? 'Hide sensitive data' : 'Show sensitive data'}
+            type="button"
           >
-            <svg viewBox="0 0 24 24" className={styles.eyeIcon} aria-hidden="true">
-              <path
-                d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              />
-              <circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
-              {!showSensitive ? <path d="M4 20L20 4" stroke="currentColor" strokeWidth="1.8" /> : null}
-            </svg>
+            {showSensitive ? <EyeOff size={16} className={styles.eyeIcon} /> : <Eye size={16} className={styles.eyeIcon} />}
           </button>
         </div>
       </div>
+
       <div className={styles.controlRow}>
         <input
           value={query}
@@ -106,6 +102,7 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
           placeholder="Search HWID or device name"
           className={styles.input}
         />
+
         <select
           value={statusFilter}
           onChange={(event) => {
@@ -119,6 +116,7 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
           <option value="inactive">Inactive</option>
         </select>
       </div>
+
       <div className={styles.licenseToolsRow}>
         <select
           value={sortBy}
@@ -135,6 +133,7 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
           <option value="hwid_hash">Sort: HWID</option>
           <option value="status">Sort: Status</option>
         </select>
+
         <select
           value={sortDir}
           onChange={(event) => setSortDir(event.target.value as 'asc' | 'desc')}
@@ -144,7 +143,9 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
           <option value="asc">Direction: Asc</option>
         </select>
       </div>
+
       {filtered.length === 0 ? <p className={styles.empty}>No devices found.</p> : null}
+
       <div className={styles.licenseCards}>
         {paged.map((device) => (
           <article
@@ -153,60 +154,133 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
             onClick={() => setSelectedDetails(device)}
           >
             <div className={styles.licenseCardHead}>
-              <span className={styles.badgeClassless}>Device</span>
-              <span className={badgeClass(device.status)}>{device.status || 'inactive'}</span>
+              <div className={styles.licenseCardHeadLeft}>
+                <span className={styles.badgeClassless}>Device</span>
+                <span className={badgeClass(device.status)}>{device.status || 'inactive'}</span>
+              </div>
+
+              <button
+                type="button"
+                className={styles.licenseIconBtn}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedDetails(device);
+                }}
+                aria-label="Open device details"
+                title="Open device details"
+              >
+                <MoreHorizontal size={16} strokeWidth={2} />
+              </button>
             </div>
+
             <div className={styles.licenseCardKey}>
-              <span className={styles.hashValue}>{formatDeviceHwid(device.hwid_hash, showSensitive)}</span>
+              <div className={styles.licenseKeyRow}>
+                <span className={styles.licenseKeyIcon}>
+                  <Cpu size={16} strokeWidth={2} />
+                </span>
+
+                <span className={styles.hashValue}>
+                  {formatDeviceHwid(device.hwid_hash, showSensitive)}
+                </span>
+              </div>
             </div>
+
+            <div className={styles.licenseStatsGrid}>
+              <div className={styles.licenseStatBox}>
+                <span className={styles.licenseStatIcon}>
+                  <MonitorSmartphone size={16} strokeWidth={2} />
+                </span>
+                <div>
+                  <p className={styles.licenseStatLabel}>Device Name</p>
+                  <p className={styles.licenseStatValue}>{device.device_name || 'Unknown'}</p>
+                </div>
+              </div>
+
+              <div className={styles.licenseStatBox}>
+                <span className={styles.licenseStatIcon}>
+                  <ShieldCheck size={16} strokeWidth={2} />
+                </span>
+                <div>
+                  <p className={styles.licenseStatLabel}>First Seen</p>
+                  <p className={styles.licenseStatValue}>{compactDate(device.first_seen_at)}</p>
+                </div>
+              </div>
+            </div>
+
             <div className={styles.licenseFacts}>
               <div className={styles.licenseFact}>
-                <span className={styles.mobileLabel}>Device Name:</span>
-                <span className={styles.licenseFactValue}>{device.device_name || 'Unknown'}</span>
-              </div>
-              <div className={styles.licenseFact}>
-                <span className={styles.mobileLabel}>First Seen:</span>
-                <span className={styles.licenseFactValue}>{formatDateTime(device.first_seen_at)}</span>
+                <span className={styles.mobileLabel}>Last Seen:</span>
+                <span className={styles.licenseFactValue}>
+                  {formatDateTime(device.last_seen_at)}
+                </span>
               </div>
             </div>
-            <div className={styles.licenseCardMeta}>
-              <div className={styles.licenseCardMetaItem}>
-                <p className={styles.mobileLabel}>Last Seen</p>
-                <p className={styles.licenseFactValue}>{formatDateTime(device.last_seen_at)}</p>
+
+            <div
+              className={`${styles.actionGroup} ${styles.deviceAction}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.deviceActionSingle}>
+                <ResetDeviceButton deviceId={device.id} onReset={onDeviceReset} pushToast={pushToast} />
               </div>
-            </div>
-            <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
-              <ResetDeviceButton deviceId={device.id} onReset={onDeviceReset} pushToast={pushToast} />
             </div>
           </article>
         ))}
       </div>
+
       {filtered.length > 0 ? (
         <div className={styles.pagination}>
-          <button className={styles.btnGhost} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+          <button className={styles.btnGhost} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} type="button">
             Prev
           </button>
           <span>{safePage} / {totalPages}</span>
-          <button className={styles.btnGhost} disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
+          <button className={styles.btnGhost} disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)} type="button">
             Next
           </button>
         </div>
       ) : null}
+
       {selectedDetails ? (
         <>
           <div className={styles.drawerOverlay} onClick={() => setSelectedDetails(null)} />
           <aside className={styles.drawerPanel}>
             <div className={styles.drawerHeader}>
               <h3 className={styles.drawerTitle}>Device Details</h3>
-              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)}>Close</button>
+              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)} type="button">
+                Close
+              </button>
             </div>
+
             <div className={styles.drawerGrid}>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>HWID Hash</p><p className={styles.drawerValue}>{selectedDetails.hwid_hash}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Device Name</p><p className={styles.drawerValue}>{selectedDetails.device_name || 'Unknown'}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Status</p><p className={styles.drawerValue}>{selectedDetails.status || 'inactive'}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>First Seen</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.first_seen_at)}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Last Seen</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.last_seen_at)}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>ID</p><p className={styles.drawerValue}>{selectedDetails.id}</p></div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>HWID Hash</p>
+                <p className={styles.drawerValue}>{selectedDetails.hwid_hash}</p>
+              </div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Device Name</p>
+                <p className={styles.drawerValue}>{selectedDetails.device_name || 'Unknown'}</p>
+              </div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Status</p>
+                <p className={styles.drawerValue}>{selectedDetails.status || 'inactive'}</p>
+              </div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>First Seen</p>
+                <p className={styles.drawerValue}>{formatDateTime(selectedDetails.first_seen_at)}</p>
+              </div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Last Seen</p>
+                <p className={styles.drawerValue}>{formatDateTime(selectedDetails.last_seen_at)}</p>
+              </div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>ID</p>
+                <p className={styles.drawerValue}>{selectedDetails.id}</p>
+              </div>
             </div>
           </aside>
         </>

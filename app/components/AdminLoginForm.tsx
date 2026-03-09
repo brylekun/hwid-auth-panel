@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import { AlertTriangle, Eye, EyeOff, LockKeyhole, ShieldCheck, User } from 'lucide-react';
 import styles from '../login/login.module.css';
 
 type Props = {
@@ -47,50 +48,91 @@ export default function AdminLoginForm({ configError = false }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
+      <div className={styles.formMeta}>
+        <span className={styles.formMetaPill}>
+          <ShieldCheck size={14} strokeWidth={2} />
+          Protected Session
+        </span>
+      </div>
+
       {configError ? (
         <p className={styles.configError}>
-          Admin auth is not configured. Set <code>ADMIN_PANEL_PASSWORD</code> in environment variables.
+          <AlertTriangle size={16} strokeWidth={2} className={styles.messageIcon} />
+          <span>
+            Admin auth is not configured. Set <code>ADMIN_PANEL_PASSWORD</code> in environment variables.
+          </span>
         </p>
       ) : null}
+
       <div>
-        <label className={styles.label} htmlFor="username">Username</label>
-        <input
-          id="username"
-          type="text"
-          placeholder="Enter admin username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          className={styles.input}
-          required
-          autoComplete="username"
-        />
+        <label className={styles.label} htmlFor="username">
+          Username
+        </label>
+
+        <div className={styles.inputWrap}>
+          <span className={styles.inputIcon} aria-hidden="true">
+            <User size={18} strokeWidth={2} />
+          </span>
+
+          <input
+            id="username"
+            type="text"
+            placeholder="Enter admin username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            className={`${styles.input} ${styles.inputWithIcon}`}
+            required
+            autoComplete="username"
+          />
+        </div>
       </div>
+
       <div>
-        <label className={styles.label} htmlFor="password">Password</label>
+        <label className={styles.label} htmlFor="password">
+          Password
+        </label>
+
         <div className={styles.passwordWrap}>
+          <span className={styles.inputIcon} aria-hidden="true">
+            <LockKeyhole size={18} strokeWidth={2} />
+          </span>
+
           <input
             id="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="Enter your password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className={styles.input}
+            className={`${styles.input} ${styles.inputWithIcon} ${styles.inputWithAction}`}
             required
             autoComplete="current-password"
           />
+
           <button
             type="button"
             className={styles.passwordBtn}
             onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            title={showPassword ? 'Hide password' : 'Show password'}
           >
-            {showPassword ? 'Hide' : 'Show'}
+            {showPassword ? <EyeOff size={16} strokeWidth={2} /> : <Eye size={16} strokeWidth={2} />}
           </button>
         </div>
       </div>
+
       <button type="submit" className={styles.submit} disabled={loading}>
-        {loading ? 'Signing in...' : 'Sign In'}
+        <span className={styles.submitInner}>
+          <ShieldCheck size={17} strokeWidth={2} />
+          {loading ? 'Signing in...' : 'Sign In'}
+        </span>
       </button>
-      {message ? <p className={styles.error}>{message}</p> : null}
+
+      {message ? (
+        <p className={styles.error}>
+          <AlertTriangle size={16} strokeWidth={2} className={styles.messageIcon} />
+          <span>{message}</span>
+        </p>
+      ) : null}
     </form>
   );
 }

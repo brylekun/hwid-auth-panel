@@ -9,11 +9,9 @@ type Props = {
   logs: AuthLogRow[];
 };
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 6;
 
 export default function AuthLogsTable({ logs }: Props) {
-  const [sortBy, setSortBy] = useState<'license_key' | 'hwid_hash' | 'result' | 'reason' | 'created_at'>('created_at');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [showSensitive, setShowSensitive] = useState(false);
   const [query, setQuery] = useState('');
   const [resultFilter, setResultFilter] = useState('all');
@@ -22,15 +20,12 @@ export default function AuthLogsTable({ logs }: Props) {
 
   const filtered = useMemo(() => {
     const q = normalize(query);
+
     return logs.filter((log) => {
       const resultMatch = resultFilter === 'all' || log.result === resultFilter;
-      if (!resultMatch) {
-        return false;
-      }
+      if (!resultMatch) return false;
 
-      if (!q) {
-        return true;
-      }
+      if (!q) return true;
 
       return (
         normalize(log.license_key).includes(q) ||
@@ -41,26 +36,14 @@ export default function AuthLogsTable({ logs }: Props) {
   }, [logs, query, resultFilter]);
 
   const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      const left = String(a[sortBy] || '');
-      const right = String(b[sortBy] || '');
-      return sortDir === 'asc' ? left.localeCompare(right) : right.localeCompare(left);
-    });
-  }, [filtered, sortBy, sortDir]);
+    return [...filtered].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [filtered]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-  function toggleSort(column: 'license_key' | 'hwid_hash' | 'result' | 'reason' | 'created_at') {
-    if (sortBy === column) {
-      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-
-    setSortBy(column);
-    setSortDir('asc');
-  }
 
   function resultClass(result: string) {
     return `${styles.badge} ${result === 'approved' ? styles.active : styles.inactive}`;
@@ -69,7 +52,11 @@ export default function AuthLogsTable({ logs }: Props) {
   return (
     <section className={styles.surface}>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Recent Auth Logs</h2>
+        <div>
+          <p className={styles.panelEyebrow}>Validation activity</p>
+          <h2 className={styles.sectionTitle}>Recent Auth Logs</h2>
+        </div>
+
         <div className={styles.sectionTools}>
           <span className={styles.metaPill}>{filtered.length} items</span>
           <button
@@ -77,6 +64,7 @@ export default function AuthLogsTable({ logs }: Props) {
             onClick={() => setShowSensitive((prev) => !prev)}
             title={showSensitive ? 'Hide sensitive data' : 'Show sensitive data'}
             aria-label={showSensitive ? 'Hide sensitive data' : 'Show sensitive data'}
+            type="button"
           >
             <svg viewBox="0 0 24 24" className={styles.eyeIcon} aria-hidden="true">
               <path
@@ -91,6 +79,7 @@ export default function AuthLogsTable({ logs }: Props) {
           </button>
         </div>
       </div>
+
       <div className={styles.controlRow}>
         <input
           value={query}
@@ -114,83 +103,109 @@ export default function AuthLogsTable({ logs }: Props) {
           <option value="denied">Denied</option>
         </select>
       </div>
+
       {filtered.length === 0 ? <p className={styles.empty}>No auth logs found.</p> : null}
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('license_key')}>License Key<span className={styles.sortIndicator}>{sortBy === 'license_key' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('hwid_hash')}>HWID Hash<span className={styles.sortIndicator}>{sortBy === 'hwid_hash' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('result')}>Result<span className={styles.sortIndicator}>{sortBy === 'result' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('reason')}>Reason<span className={styles.sortIndicator}>{sortBy === 'reason' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('created_at')}>Created At<span className={styles.sortIndicator}>{sortBy === 'created_at' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-            </tr>
-          </thead>
-          <tbody>
-            {paged.map((log) => (
-              <tr key={log.id} onClick={() => setSelectedDetails(log)}>
-                <td>{maskValue(log.license_key, showSensitive)}</td>
-                <td>{maskValue(log.hwid_hash, showSensitive, 6)}</td>
-                <td><span className={resultClass(log.result)}>{log.result}</span></td>
-                <td>{log.reason}</td>
-                <td>{formatDateTime(log.created_at)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className={styles.mobileList}>
+
+      <div className={styles.logStream}>
         {paged.map((log) => (
-          <article key={log.id} className={styles.mobileCard}>
-            <div className={styles.mobileRow}>
-              <span className={styles.mobileLabel}>License</span>
-              <span>{maskValue(log.license_key, showSensitive)}</span>
+          <button
+            key={log.id}
+            type="button"
+            className={styles.logRow}
+            onClick={() => setSelectedDetails(log)}
+          >
+            <span
+              className={`${styles.logDot} ${
+                log.result === 'approved' ? styles.logDotSuccess : styles.logDotDanger
+              }`}
+              aria-hidden="true"
+            />
+
+            <div className={styles.logMain}>
+              <div className={styles.logTop}>
+                <div className={styles.logIdentity}>
+                  <span className={styles.logMono}>
+                    {maskValue(log.license_key, showSensitive)}
+                  </span>
+                  <span className={styles.logDivider}>•</span>
+                  <span className={styles.logMono}>
+                    {maskValue(log.hwid_hash, showSensitive, 6)}
+                  </span>
+                </div>
+
+                <div className={styles.logMetaRight}>
+                  <span className={resultClass(log.result)}>{log.result}</span>
+                  <span className={styles.logTime}>{formatDateTime(log.created_at)}</span>
+                </div>
+              </div>
+
+              <div className={styles.logBottom}>
+                <span className={styles.logReason}>{log.reason}</span>
+                <span className={styles.logHint}>Click for details</span>
+              </div>
             </div>
-            <div className={styles.mobileRow}>
-              <span className={styles.mobileLabel}>HWID</span>
-              <span>{maskValue(log.hwid_hash, showSensitive, 6)}</span>
-            </div>
-            <div className={styles.mobileRow}>
-              <span className={styles.mobileLabel}>Result</span>
-              <span className={resultClass(log.result)}>{log.result}</span>
-            </div>
-            <div className={styles.mobileRow}>
-              <span className={styles.mobileLabel}>Reason</span>
-              <span>{log.reason}</span>
-            </div>
-            <div className={styles.mobileRow}>
-              <span className={styles.mobileLabel}>At</span>
-              <span>{formatDateTime(log.created_at)}</span>
-            </div>
-          </article>
+          </button>
         ))}
       </div>
+
       {filtered.length > PAGE_SIZE ? (
         <div className={styles.pagination}>
-          <button className={styles.btnGhost} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+          <button
+            className={styles.btnGhost}
+            disabled={safePage <= 1}
+            onClick={() => setPage(safePage - 1)}
+            type="button"
+          >
             Prev
           </button>
           <span>{safePage} / {totalPages}</span>
-          <button className={styles.btnGhost} disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
+          <button
+            className={styles.btnGhost}
+            disabled={safePage >= totalPages}
+            onClick={() => setPage(safePage + 1)}
+            type="button"
+          >
             Next
           </button>
         </div>
       ) : null}
+
       {selectedDetails ? (
         <>
           <div className={styles.drawerOverlay} onClick={() => setSelectedDetails(null)} />
           <aside className={styles.drawerPanel}>
             <div className={styles.drawerHeader}>
               <h3 className={styles.drawerTitle}>Auth Log Details</h3>
-              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)}>Close</button>
+              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)} type="button">
+                Close
+              </button>
             </div>
+
             <div className={styles.drawerGrid}>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>License Key</p><p className={styles.drawerValue}>{selectedDetails.license_key}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>HWID Hash</p><p className={styles.drawerValue}>{selectedDetails.hwid_hash}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Result</p><p className={styles.drawerValue}>{selectedDetails.result}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Reason</p><p className={styles.drawerValue}>{selectedDetails.reason}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Created At</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.created_at)}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>ID</p><p className={styles.drawerValue}>{selectedDetails.id}</p></div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>License Key</p>
+                <p className={styles.drawerValue}>{selectedDetails.license_key}</p>
+              </div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>HWID Hash</p>
+                <p className={styles.drawerValue}>{selectedDetails.hwid_hash}</p>
+              </div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Result</p>
+                <p className={styles.drawerValue}>{selectedDetails.result}</p>
+              </div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Reason</p>
+                <p className={styles.drawerValue}>{selectedDetails.reason}</p>
+              </div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Created At</p>
+                <p className={styles.drawerValue}>{formatDateTime(selectedDetails.created_at)}</p>
+              </div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>ID</p>
+                <p className={styles.drawerValue}>{selectedDetails.id}</p>
+              </div>
             </div>
           </aside>
         </>

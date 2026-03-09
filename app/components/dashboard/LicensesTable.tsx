@@ -1,6 +1,19 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import {
+  CalendarClock,
+  Copy,
+  Eye,
+  EyeOff,
+  KeyRound,
+  MoreHorizontal,
+  Pencil,
+  Power,
+  ShieldAlert,
+  Smartphone,
+  Trash2,
+} from 'lucide-react';
 import { formatDateTime, getLicenseExpiryInfo, maskValue, normalize } from './format';
 import styles from './dashboard.module.css';
 import type { DeviceRow, LicenseRow } from './types';
@@ -16,14 +29,10 @@ type Props = {
 const PAGE_SIZE = 8;
 
 function isExpired(expiresAt: string | null) {
-  if (!expiresAt) {
-    return false;
-  }
+  if (!expiresAt) return false;
 
   const expiryMs = new Date(expiresAt).getTime();
-  if (Number.isNaN(expiryMs)) {
-    return false;
-  }
+  if (Number.isNaN(expiryMs)) return false;
 
   return expiryMs <= Date.now();
 }
@@ -38,14 +47,10 @@ function toLocalDateTimeInputValue(date: Date) {
 }
 
 function toIsoFromLocalDateTimeInput(value: string) {
-  if (!value) {
-    return null;
-  }
+  if (!value) return null;
 
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
+  if (Number.isNaN(parsed.getTime())) return null;
 
   return parsed.toISOString();
 }
@@ -72,25 +77,23 @@ export default function LicensesTable({
 
   const filtered = useMemo(() => {
     const q = normalize(query);
+
     return licenses.filter((license) => {
       const derivedStatus = isExpired(license.expires_at)
         ? 'expired'
         : license.status === 'active'
           ? 'active'
           : 'inactive';
+
       const statusMatch =
         statusFilter === 'all'
           ? true
           : statusFilter === 'active'
             ? derivedStatus === 'active'
             : derivedStatus === 'inactive' || derivedStatus === 'expired';
-      if (!statusMatch) {
-        return false;
-      }
 
-      if (!q) {
-        return true;
-      }
+      if (!statusMatch) return false;
+      if (!q) return true;
 
       return normalize(license.license_key).includes(q);
     });
@@ -130,16 +133,17 @@ export default function LicensesTable({
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   const devicesByLicenseId = useMemo(() => {
     const map = new Map<string, DeviceRow[]>();
+
     for (const device of devices) {
-      if (!device.license_id) {
-        continue;
-      }
+      if (!device.license_id) continue;
       const list = map.get(device.license_id) || [];
       list.push(device);
       map.set(device.license_id, list);
     }
+
     return map;
   }, [devices]);
 
@@ -152,10 +156,7 @@ export default function LicensesTable({
   }
 
   function getDisplayStatus(license: LicenseRow) {
-    if (isExpired(license.expires_at)) {
-      return 'expired';
-    }
-
+    if (isExpired(license.expires_at)) return 'expired';
     return license.status === 'active' ? 'active' : 'inactive';
   }
 
@@ -171,6 +172,7 @@ export default function LicensesTable({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ licenseId, ...payload }),
       });
+
       const data = await response.json();
 
       if (!response.ok || !data.success) {
@@ -189,12 +191,14 @@ export default function LicensesTable({
 
   async function deleteLicense(licenseId: string) {
     setBusyId(licenseId);
+
     try {
       const response = await fetch('/api/admin/delete-license', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ licenseId }),
       });
+
       const data = await response.json();
 
       if (!response.ok || !data.success) {
@@ -221,32 +225,23 @@ export default function LicensesTable({
   }
 
   function getExpiryBadgeClass(state: 'active' | 'expired' | 'never' | 'invalid') {
-    if (state === 'active') {
-      return `${styles.badge} ${styles.expiryActive}`;
-    }
-
-    if (state === 'expired') {
-      return `${styles.badge} ${styles.expiryExpired}`;
-    }
-
+    if (state === 'active') return `${styles.badge} ${styles.expiryActive}`;
+    if (state === 'expired') return `${styles.badge} ${styles.expiryExpired}`;
     return `${styles.badge} ${styles.expiryNeutral}`;
   }
 
   function getUsedBy(licenseId: string) {
     const linked = devicesByLicenseId.get(licenseId) || [];
-    if (linked.length === 0) {
-      return 'No device';
-    }
+    if (linked.length === 0) return 'No device';
 
     const sortedDevices = [...linked].sort((a, b) =>
       String(b.last_seen_at || '').localeCompare(String(a.last_seen_at || ''))
     );
+
     const primary = sortedDevices[0];
     const primaryLabel = primary.device_name?.trim() || maskValue(primary.hwid_hash, false, 6);
 
-    if (sortedDevices.length === 1) {
-      return primaryLabel;
-    }
+    if (sortedDevices.length === 1) return primaryLabel;
 
     return `${primaryLabel} (+${sortedDevices.length - 1} more)`;
   }
@@ -261,9 +256,7 @@ export default function LicensesTable({
   }
 
   function closeAction() {
-    if (busyId) {
-      return;
-    }
+    if (busyId) return;
 
     setActionType(null);
     setSelected(null);
@@ -272,24 +265,22 @@ export default function LicensesTable({
   }
 
   function extendExpiryBy(durationMs: number) {
-    if (!selected) {
-      return;
-    }
+    if (!selected) return;
 
     const nowMs = Date.now();
     const currentExpiryMs = selected.expires_at
       ? new Date(selected.expires_at).getTime()
       : Number.NaN;
+
     const baseMs = Number.isNaN(currentExpiryMs)
       ? nowMs
       : Math.max(currentExpiryMs, nowMs);
+
     setDraftExpiresAt(toLocalDateTimeInputValue(new Date(baseMs + durationMs)));
   }
 
   async function confirmAction() {
-    if (!selected || !actionType) {
-      return;
-    }
+    if (!selected || !actionType) return;
 
     if (actionType === 'edit') {
       const next = draftKey.trim();
@@ -307,7 +298,9 @@ export default function LicensesTable({
       const originalExpiryMs = selected.expires_at
         ? new Date(selected.expires_at).getTime()
         : Number.NaN;
+
       const nextExpiryMs = draftExpiresAt ? new Date(draftExpiresAt).getTime() : Number.NaN;
+
       const expiryChanged =
         (selected.expires_at == null && draftExpiresAt !== '') ||
         (selected.expires_at != null && draftExpiresAt === '') ||
@@ -355,7 +348,11 @@ export default function LicensesTable({
   return (
     <section className={styles.surface}>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Licenses</h2>
+        <div>
+          <p className={styles.panelEyebrow}>License inventory</p>
+          <h2 className={styles.sectionTitle}>Licenses</h2>
+        </div>
+
         <div className={styles.sectionTools}>
           <span className={styles.metaPill}>{filtered.length} items</span>
           <button
@@ -363,20 +360,13 @@ export default function LicensesTable({
             onClick={() => setShowSensitive((prev) => !prev)}
             title={showSensitive ? 'Hide sensitive data' : 'Show sensitive data'}
             aria-label={showSensitive ? 'Hide sensitive data' : 'Show sensitive data'}
+            type="button"
           >
-            <svg viewBox="0 0 24 24" className={styles.eyeIcon} aria-hidden="true">
-              <path
-                d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              />
-              <circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
-              {!showSensitive ? <path d="M4 20L20 4" stroke="currentColor" strokeWidth="1.8" /> : null}
-            </svg>
+            {showSensitive ? <EyeOff size={16} className={styles.eyeIcon} /> : <Eye size={16} className={styles.eyeIcon} />}
           </button>
         </div>
       </div>
+
       <div className={styles.controlRow}>
         <input
           value={query}
@@ -387,6 +377,7 @@ export default function LicensesTable({
           placeholder="Search by license key"
           className={styles.input}
         />
+
         <select
           value={statusFilter}
           onChange={(event) => {
@@ -397,9 +388,10 @@ export default function LicensesTable({
         >
           <option value="all">All status</option>
           <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="inactive">Inactive / expired</option>
         </select>
       </div>
+
       <div className={styles.licenseToolsRow}>
         <select
           value={sortBy}
@@ -416,6 +408,7 @@ export default function LicensesTable({
           <option value="max_devices">Sort: Max Devices</option>
           <option value="expires_at">Sort: Expires</option>
         </select>
+
         <select
           value={sortDir}
           onChange={(event) => setSortDir(event.target.value as 'asc' | 'desc')}
@@ -425,107 +418,163 @@ export default function LicensesTable({
           <option value="asc">Direction: Asc</option>
         </select>
       </div>
+
       {filtered.length === 0 ? <p className={styles.empty}>No licenses found.</p> : null}
+
       <div className={styles.licenseCards}>
-        {paged.map((license) => (
-          <article
-            key={license.id}
-            className={styles.licenseCard}
-            onClick={() => setSelectedDetails(license)}
-          >
-            <div className={styles.licenseCardHead}>
-              <span className={styles.badgeClassless}>License</span>
-              <span className={badgeClass(getDisplayStatus(license))}>{getDisplayStatus(license)}</span>
-            </div>
-            <div className={styles.licenseCardKey}>
-              <span className={styles.keyCell}>
-                <span>{maskValue(license.license_key, showSensitive)}</span>
+        {paged.map((license) => {
+          const displayStatus = getDisplayStatus(license);
+          const expiry = getLicenseExpiryInfo(license.expires_at);
+
+          return (
+            <article
+              key={license.id}
+              className={styles.licenseCard}
+              onClick={() => setSelectedDetails(license)}
+            >
+              <div className={styles.licenseCardHead}>
+                <div className={styles.licenseCardHeadLeft}>
+                  <span className={styles.badgeClassless}>License</span>
+                  <span className={`${badgeClass(displayStatus)} ${styles.badgeCompact}`}>{displayStatus}</span>
+                </div>
+
                 <button
                   type="button"
-                  className={styles.copyBtn}
+                  className={styles.licenseIconBtn}
                   onClick={(event) => {
                     event.stopPropagation();
-                    void copyLicenseKey(license.license_key);
+                    setSelectedDetails(license);
                   }}
-                  title="Copy license key"
-                  aria-label="Copy license key"
+                  aria-label="Open license details"
+                  title="Open license details"
                 >
-                  Copy
+                  <MoreHorizontal size={16} strokeWidth={2} />
                 </button>
-              </span>
-            </div>
-            <div className={styles.licenseFacts}>
-              <div className={styles.licenseFact}>
-                <span className={styles.mobileLabel}>Created:</span>
-                <span className={styles.licenseFactValue}>{formatDateTime(license.created_at)}</span>
               </div>
-              <div className={styles.licenseFact}>
-                <span className={styles.mobileLabel}>Used by:</span>
-                <span className={styles.licenseFactValue}>{getUsedBy(license.id)}</span>
-              </div>
-            </div>
-            <div className={styles.licenseCardMeta}>
-              <div className={styles.licenseCardMetaItem}>
-                <p className={styles.mobileLabel}>Expiry</p>
-                <div className={styles.expiryStack}>
-                  {(() => {
-                    const expiry = getLicenseExpiryInfo(license.expires_at);
-                    return (
-                      <>
-                        <span className={getExpiryBadgeClass(expiry.state)}>
-                          {expiry.state === 'active'
-                            ? 'Active'
-                            : expiry.state === 'expired'
-                              ? 'Expired'
-                              : 'Never'}
-                        </span>
-                        <span className={styles.expiryHint}>{expiry.label}</span>
-                        {expiry.state !== 'never' ? (
-                          <span className={styles.expiryDate}>{expiry.dateLabel}</span>
-                        ) : null}
-                      </>
-                    );
-                  })()}
+
+              <div className={styles.licenseCardKey}>
+                <div className={styles.licenseKeyRow}>
+                  <span className={styles.licenseKeyIcon}>
+                    <KeyRound size={16} strokeWidth={2} />
+                  </span>
+
+                  <span className={styles.hashValue}>
+                    {maskValue(license.license_key, showSensitive)}
+                  </span>
+
+                  <button
+                    type="button"
+                    className={styles.copyBtn}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void copyLicenseKey(license.license_key);
+                    }}
+                    title="Copy license key"
+                    aria-label="Copy license key"
+                  >
+                    <Copy size={14} strokeWidth={2} />
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
-              <button
-                className={styles.btnGhost}
-                onClick={() => openAction('edit', license)}
-                disabled={busyId === license.id}
-              >
-                Edit
-              </button>
-              <button
-                className={styles.btnGhost}
-                onClick={() => openAction('status', license)}
-                disabled={busyId === license.id}
-              >
-                {license.status === 'active' ? 'Ban' : 'Activate'}
-              </button>
-              <button
-                className={styles.btnDanger}
-                onClick={() => openAction('delete', license)}
-                disabled={busyId === license.id}
-              >
-                Delete
-              </button>
-            </div>
-          </article>
-        ))}
+
+              <div className={styles.licenseStatsGrid}>
+                <div className={styles.licenseStatBox}>
+                  <span className={styles.licenseStatIcon}>
+                    <CalendarClock size={16} strokeWidth={2} />
+                  </span>
+                  <div>
+                    <p className={styles.licenseStatLabel}>Created</p>
+                    <p className={styles.licenseStatValue}>{formatDateTime(license.created_at)}</p>
+                  </div>
+                </div>
+
+                <div className={styles.licenseStatBox}>
+                  <span className={styles.licenseStatIcon}>
+                    <Smartphone size={16} strokeWidth={2} />
+                  </span>
+                  <div>
+                    <p className={styles.licenseStatLabel}>Used by</p>
+                    <p className={styles.licenseStatValue}>{getUsedBy(license.id)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.licenseCardMeta}>
+                <div className={styles.licenseCardMetaItem}>
+                  <div className={styles.expiryHeader}>
+                    <p className={styles.mobileLabel}>Expiry</p>
+                    <span className={getExpiryBadgeClass(expiry.state)}>
+                      {expiry.state === 'active'
+                        ? 'Active'
+                        : expiry.state === 'expired'
+                          ? 'Expired'
+                          : 'Never'}
+                    </span>
+                  </div>
+
+                  <div className={styles.expiryStack}>
+                    <span className={styles.expiryHint}>{expiry.label}</span>
+                    {expiry.state !== 'never' ? (
+                      <span className={styles.expiryDate}>{expiry.dateLabel}</span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
+                <button
+                  className={styles.btnGhost}
+                  onClick={() => openAction('edit', license)}
+                  disabled={busyId === license.id}
+                  type="button"
+                >
+                  <span className={styles.btnInline}>
+                    <Pencil size={15} strokeWidth={2} />
+                    Edit
+                  </span>
+                </button>
+
+                <button
+                  className={styles.btnGhost}
+                  onClick={() => openAction('status', license)}
+                  disabled={busyId === license.id}
+                  type="button"
+                >
+                  <span className={styles.btnInline}>
+                    <Power size={15} strokeWidth={2} />
+                    {license.status === 'active' ? 'Deactivate' : 'Activate'}
+                  </span>
+                </button>
+
+                <button
+                  className={styles.btnDanger}
+                  onClick={() => openAction('delete', license)}
+                  disabled={busyId === license.id}
+                  type="button"
+                >
+                  <span className={styles.btnInline}>
+                    <Trash2 size={15} strokeWidth={2} />
+                    Delete
+                  </span>
+                </button>
+              </div>
+            </article>
+          );
+        })}
       </div>
+
       {filtered.length > 0 ? (
         <div className={styles.pagination}>
-          <button className={styles.btnGhost} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+          <button className={styles.btnGhost} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)} type="button">
             Prev
           </button>
           <span>{safePage} / {totalPages}</span>
-          <button className={styles.btnGhost} disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
+          <button className={styles.btnGhost} disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)} type="button">
             Next
           </button>
         </div>
       ) : null}
+
       {selected && actionType ? (
         <div className={styles.modalOverlay} role="presentation" onClick={closeAction}>
           <div
@@ -535,19 +584,26 @@ export default function LicensesTable({
             onClick={(event) => event.stopPropagation()}
           >
             <h3 className={styles.modalTitle}>
-              {actionType === 'edit' ? 'Edit License Key' : actionType === 'status'
-                ? selected.status === 'active' ? 'Ban License' : 'Activate License'
-                : 'Delete License'}
+              {actionType === 'edit'
+                ? 'Edit License'
+                : actionType === 'status'
+                  ? selected.status === 'active'
+                    ? 'Deactivate License'
+                    : 'Activate License'
+                  : 'Delete License'}
             </h3>
+
             {actionType === 'edit' ? (
               <div className={styles.modalBody}>
-                <p className={styles.modalText}>Update key and expiry duration for this license.</p>
+                <p className={styles.modalText}>Update key and expiry settings for this license.</p>
+
                 <input
                   className={styles.input}
                   value={draftKey}
                   onChange={(event) => setDraftKey(event.target.value)}
                   autoFocus
                 />
+
                 <div className={styles.modalSection}>
                   <p className={styles.modalText}>Current expiry</p>
                   {(() => {
@@ -569,26 +625,18 @@ export default function LicensesTable({
                     );
                   })()}
                 </div>
+
                 <div className={styles.modalSection}>
                   <p className={styles.modalText}>Extend duration</p>
                   <div className={styles.modalQuickActions}>
-                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(60 * 60 * 1000)}>
-                      +1h
-                    </button>
-                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(24 * 60 * 60 * 1000)}>
-                      +24h
-                    </button>
-                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(7 * 24 * 60 * 60 * 1000)}>
-                      +7d
-                    </button>
-                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(30 * 24 * 60 * 60 * 1000)}>
-                      +30d
-                    </button>
-                    <button type="button" className={styles.btnMini} onClick={() => setDraftExpiresAt('')}>
-                      Never
-                    </button>
+                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(60 * 60 * 1000)}>+1h</button>
+                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(24 * 60 * 60 * 1000)}>+24h</button>
+                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(7 * 24 * 60 * 60 * 1000)}>+7d</button>
+                    <button type="button" className={styles.btnMini} onClick={() => extendExpiryBy(30 * 24 * 60 * 60 * 1000)}>+30d</button>
+                    <button type="button" className={styles.btnMini} onClick={() => setDraftExpiresAt('')}>Never</button>
                   </div>
                 </div>
+
                 <div className={styles.modalSection}>
                   <p className={styles.modalText}>Set exact expiration</p>
                   <input
@@ -602,39 +650,64 @@ export default function LicensesTable({
             ) : (
               <p className={styles.modalText}>
                 {actionType === 'status'
-                  ? `Are you sure you want to ${selected.status === 'active' ? 'ban' : 'activate'} this license?`
+                  ? `Are you sure you want to ${selected.status === 'active' ? 'deactivate' : 'activate'} this license?`
                   : 'Are you sure you want to delete this license? This cannot be undone.'}
               </p>
             )}
+
             <div className={styles.modalActions}>
-              <button className={styles.btnGhost} onClick={closeAction} disabled={Boolean(busyId)}>
+              <button className={styles.btnGhost} onClick={closeAction} disabled={Boolean(busyId)} type="button">
                 Cancel
               </button>
+
               <button
                 className={actionType === 'delete' ? styles.btnDanger : styles.btn}
                 onClick={() => void confirmAction()}
                 disabled={Boolean(busyId)}
+                type="button"
               >
-                {busyId ? 'Processing...' : actionType === 'edit' ? 'Save' : actionType === 'status'
-                  ? selected.status === 'active' ? 'Ban' : 'Activate'
-                  : 'Delete'}
+                {busyId
+                  ? 'Processing...'
+                  : actionType === 'edit'
+                    ? 'Save'
+                    : actionType === 'status'
+                      ? selected.status === 'active'
+                        ? 'Deactivate'
+                        : 'Activate'
+                      : 'Delete'}
               </button>
             </div>
           </div>
         </div>
       ) : null}
+
       {selectedDetails ? (
         <>
           <div className={styles.drawerOverlay} onClick={() => setSelectedDetails(null)} />
           <aside className={styles.drawerPanel}>
             <div className={styles.drawerHeader}>
               <h3 className={styles.drawerTitle}>License Details</h3>
-              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)}>Close</button>
+              <button className={styles.btnGhost} onClick={() => setSelectedDetails(null)} type="button">
+                Close
+              </button>
             </div>
+
             <div className={styles.drawerGrid}>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>License Key</p><p className={styles.drawerValue}>{selectedDetails.license_key}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Status</p><p className={styles.drawerValue}>{getDisplayStatus(selectedDetails)}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Used by</p><p className={styles.drawerValue}>{getUsedBy(selectedDetails.id)}</p></div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>License Key</p>
+                <p className={styles.drawerValue}>{selectedDetails.license_key}</p>
+              </div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Status</p>
+                <p className={styles.drawerValue}>{getDisplayStatus(selectedDetails)}</p>
+              </div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Used by</p>
+                <p className={styles.drawerValue}>{getUsedBy(selectedDetails.id)}</p>
+              </div>
+
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>Expiry</p>
                 {(() => {
@@ -656,8 +729,16 @@ export default function LicensesTable({
                   );
                 })()}
               </div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Created At</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.created_at)}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>ID</p><p className={styles.drawerValue}>{selectedDetails.id}</p></div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Created At</p>
+                <p className={styles.drawerValue}>{formatDateTime(selectedDetails.created_at)}</p>
+              </div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>ID</p>
+                <p className={styles.drawerValue}>{selectedDetails.id}</p>
+              </div>
             </div>
           </aside>
         </>

@@ -21,19 +21,15 @@ function buildLastNDaySeries(labels: string[], counts: Map<string, number>): Poi
 }
 
 function percent(approved: number, total: number) {
-  if (!total) {
-    return 0;
-  }
-
+  if (!total) return 0;
   return Math.round((approved / total) * 100);
 }
 
 function buildPolyline(points: Point[]) {
-  if (!points.length) {
-    return '';
-  }
+  if (!points.length) return '';
 
   const max = Math.max(...points.map((p) => p.value), 1);
+
   return points
     .map((point, index) => {
       const x = (index / Math.max(points.length - 1, 1)) * 100;
@@ -43,8 +39,27 @@ function buildPolyline(points: Point[]) {
     .join(' ');
 }
 
+function buildArea(points: Point[]) {
+  if (!points.length) return '';
+
+  const line = buildPolyline(points);
+  return `0,100 ${line} 100,100`;
+}
+
+function shortDayLabel(dayKey: string) {
+  const [, month, day] = dayKey.split('-');
+  return `${month}/${day}`;
+}
+
 export default function TrendWidgets({ licenses, logs, referenceTime }: Props) {
-  const { growthSeries, authSeries, approvalRate, totalAttempts } = useMemo(() => {
+  const {
+    growthSeries,
+    authSeries,
+    approvalRate,
+    totalAttempts,
+    approvedTotal,
+    deniedTotal,
+  } = useMemo(() => {
     const days: string[] = [];
     for (let i = 6; i >= 0; i -= 1) {
       days.push(toManilaDayKey(referenceTime - i * 24 * 60 * 60 * 1000));
@@ -73,18 +88,26 @@ export default function TrendWidgets({ licenses, logs, referenceTime }: Props) {
       return { label: day, value: percent(info.approved, info.total) };
     });
 
-    const approvedTotal = logs.filter((log) => log.result === 'approved').length;
+    const approved = logs.filter((log) => log.result === 'approved').length;
+    const denied = Math.max(0, logs.length - approved);
+
     return {
       growthSeries: growth,
       authSeries: auth,
-      approvalRate: percent(approvedTotal, logs.length),
+      approvalRate: percent(approved, logs.length),
       totalAttempts: logs.length,
+      approvedTotal: approved,
+      deniedTotal: denied,
     };
   }, [licenses, logs, referenceTime]);
 
   const growthLine = buildPolyline(growthSeries);
   const authLine = buildPolyline(authSeries);
+  const growthArea = buildArea(growthSeries);
+  const authArea = buildArea(authSeries);
+
   const totalNewLicenses = growthSeries.reduce((sum, point) => sum + point.value, 0);
+  const bestGrowthDay = Math.max(...growthSeries.map((point) => point.value), 0);
   const avgApproval = authSeries.length
     ? Math.round(authSeries.reduce((sum, point) => sum + point.value, 0) / authSeries.length)
     : 0;
@@ -92,30 +115,70 @@ export default function TrendWidgets({ licenses, logs, referenceTime }: Props) {
   return (
     <section className={styles.surface}>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Performance Pulse</h2>
+        <div>
+          <p className={styles.panelEyebrow}>Activity intelligence</p>
+          <h2 className={styles.sectionTitle}>Performance Pulse</h2>
+        </div>
         <span className={styles.metaPill}>Last 7 days</span>
       </div>
+
       <div className={styles.chartsGrid}>
         <article className={styles.chartCard}>
-          <p className={styles.chartEyebrow}>License Growth</p>
-          <p className={styles.chartValue}>{totalNewLicenses}</p>
-          <p className={styles.chartHint}>new licenses issued in last 7 days</p>
+          <div className={styles.chartHead}>
+            <div>
+              <p className={styles.chartEyebrow}>License Growth</p>
+              <p className={styles.chartValue}>{totalNewLicenses}</p>
+            </div>
+            <div className={styles.chartSideStat}>
+              <span className={styles.chartSideLabel}>Peak Day</span>
+              <strong className={styles.chartSideValue}>{bestGrowthDay}</strong>
+            </div>
+          </div>
+
+          <p className={styles.chartHint}>New licenses issued across the last 7 days</p>
+
           <div className={styles.sparkWrap}>
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.spark}>
+              <polygon points={growthArea} className={styles.sparkAreaPrimary} />
               <polyline points={growthLine} className={styles.sparkLinePrimary} />
             </svg>
           </div>
+
+          <div className={styles.sparkLabels}>
+            {growthSeries.map((point) => (
+              <span key={point.label} className={styles.sparkLabel}>
+                {shortDayLabel(point.label)}
+              </span>
+            ))}
+          </div>
         </article>
+
         <article className={styles.chartCard}>
-          <p className={styles.chartEyebrow}>Approval Rate</p>
-          <p className={styles.chartValue}>{approvalRate}%</p>
+          <div className={styles.chartHead}>
+            <div>
+              <p className={styles.chartEyebrow}>Approval Rate</p>
+              <p className={styles.chartValue}>{approvalRate}%</p>
+            </div>
+            <div className={styles.chartSideStat}>
+              <span className={styles.chartSideLabel}>Denied</span>
+              <strong className={styles.chartSideValue}>{deniedTotal}</strong>
+            </div>
+          </div>
+
           <p className={styles.chartHint}>
-            {avgApproval}% avg daily approval, {totalAttempts} attempts sampled
+            {avgApproval}% avg daily approval across {totalAttempts} validation attempts
           </p>
+
           <div className={styles.sparkWrap}>
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.spark}>
+              <polygon points={authArea} className={styles.sparkAreaAccent} />
               <polyline points={authLine} className={styles.sparkLineAccent} />
             </svg>
+          </div>
+
+          <div className={styles.chartFooterMeta}>
+            <span className={styles.chartFooterItem}>Approved: {approvedTotal}</span>
+            <span className={styles.chartFooterItem}>Denied: {deniedTotal}</span>
           </div>
         </article>
       </div>

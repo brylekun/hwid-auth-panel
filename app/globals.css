@@ -1,22 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --background: #04070d;
-  --surface: #0c121d;
-  --surface-2: #121a29;
-  --border: #2f3b56;
-  --border-strong: #4a5e86;
-  --foreground: #eff4ff;
-  --muted: #9caac4;
-  --accent: #6fe6cf;
-  --accent-strong: #39baa6;
-  --accent-warm: #f3c67c;
-  --shadow-lg: 0 30px 70px rgba(1, 5, 11, 0.6);
+  --bg-0: #04060c;
+  --bg-1: #090f1d;
+  --bg-2: #121b30;
+  --surface-0: rgba(12, 19, 34, 0.86);
+  --surface-1: rgba(17, 28, 48, 0.84);
+  --surface-2: rgba(26, 40, 66, 0.78);
+  --line-soft: rgba(131, 157, 204, 0.26);
+  --line-strong: rgba(165, 189, 233, 0.45);
+  --text-1: #eef4ff;
+  --text-2: #b3c2dd;
+  --text-3: #8e9fbe;
+  --teal: #66e7ce;
+  --teal-strong: #2cc6a9;
+  --amber: #f0c578;
+  --indigo: #8aa8ff;
+  --danger: #f08a9c;
+  --ok: #80f0be;
+  --shadow-xl: 0 32px 70px rgba(3, 8, 19, 0.58);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg-0);
+  --color-foreground: var(--text-1);
   --font-sans: var(--font-sora);
   --font-mono: var(--font-jetbrains-mono);
 }
@@ -30,15 +37,16 @@
 html,
 body {
   min-height: 100vh;
-  background: var(--background);
-  color: var(--foreground);
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text-1);
   font-family: var(--font-sora), "Segoe UI", sans-serif;
-  background-image:
-    radial-gradient(circle at 8% 8%, rgba(111, 230, 207, 0.2), transparent 28%),
-    radial-gradient(circle at 88% 10%, rgba(243, 198, 124, 0.12), transparent 26%),
-    radial-gradient(circle at 50% 120%, rgba(72, 108, 168, 0.14), transparent 32%),
-    linear-gradient(150deg, #050913 0%, #04070d 38%, #070c17 100%);
   text-rendering: optimizeLegibility;
+  background-image:
+    radial-gradient(circle at 8% 10%, rgba(102, 231, 206, 0.2), transparent 32%),
+    radial-gradient(circle at 92% 8%, rgba(240, 197, 120, 0.13), transparent 26%),
+    radial-gradient(circle at 50% 115%, rgba(128, 156, 236, 0.13), transparent 34%),
+    linear-gradient(155deg, #070b14 0%, #04060c 42%, #070d1a 100%);
 }
 
 body::before {
@@ -47,11 +55,11 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(125, 152, 204, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(125, 152, 204, 0.06) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(circle at 50% 8%, #000 22%, transparent 90%);
-  z-index: -1;
+    linear-gradient(rgba(138, 163, 209, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(138, 163, 209, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at 50% -8%, #000 24%, transparent 72%);
+  z-index: -2;
 }
 
 body::after {
@@ -60,19 +68,19 @@ body::after {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 82%, rgba(57, 186, 166, 0.12), transparent 30%),
-    radial-gradient(circle at 84% 72%, rgba(114, 146, 210, 0.1), transparent 28%);
+    radial-gradient(circle at 16% 82%, rgba(44, 198, 169, 0.14), transparent 28%),
+    radial-gradient(circle at 84% 70%, rgba(127, 160, 239, 0.1), transparent 30%);
   z-index: -1;
 }
 
 ::selection {
-  background: rgba(111, 230, 207, 0.3);
-  color: #f8fcff;
+  background: rgba(102, 231, 206, 0.3);
+  color: #f9fdff;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(98, 130, 188, 0.65) rgba(8, 13, 24, 0.7);
+  scrollbar-color: rgba(102, 130, 184, 0.75) rgba(10, 16, 28, 0.65);
 }
 
 *::-webkit-scrollbar {
@@ -81,10 +89,29 @@ body::after {
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(8, 13, 24, 0.7);
+  background: rgba(10, 16, 28, 0.65);
 }
 
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(96, 126, 182, 0.9), rgba(58, 82, 129, 0.9));
+  background: linear-gradient(180deg, rgba(108, 139, 203, 0.94), rgba(68, 95, 150, 0.9));
   border-radius: 999px;
+  border: 1px solid rgba(13, 20, 33, 0.6);
+}
+
+
+/* Glass gradient background layer */
+
+.dashboardGlass {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -3;
+
+  background:
+    radial-gradient(circle at 18% 22%, rgba(102,231,206,0.10), transparent 35%),
+    radial-gradient(circle at 82% 78%, rgba(138,168,255,0.08), transparent 35%),
+    radial-gradient(circle at 60% -10%, rgba(240,197,120,0.06), transparent 40%);
+
+  filter: blur(60px);
+  opacity: 0.9;
 }

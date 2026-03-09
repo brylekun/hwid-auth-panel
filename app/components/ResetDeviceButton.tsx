@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { RotateCcw } from 'lucide-react';
 import styles from './dashboard/dashboard.module.css';
 
 type Props = {
@@ -41,22 +42,55 @@ export default function ResetDeviceButton({ deviceId, onReset, pushToast }: Prop
 
   return (
     <>
-      <button onClick={() => setConfirmOpen(true)} className={styles.btnGhost} disabled={loading}>
-        {loading ? 'Resetting...' : 'Reset'}
+      <button
+        type="button"
+        onClick={() => setConfirmOpen(true)}
+          className={styles.btnDangerSmall}
+        disabled={loading}
+      >
+        <span className={styles.btnInline}>
+          <RotateCcw size={15} strokeWidth={2} />
+          {loading ? 'Resetting...' : 'Reset Device'}
+        </span>
       </button>
+
       {confirmOpen ? (
-        <div className={styles.modalOverlay} role="presentation" onClick={() => !loading && setConfirmOpen(false)}>
-          <div className={styles.modalCard} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div
+          className={styles.modalOverlay}
+          role="presentation"
+          onClick={() => !loading && setConfirmOpen(false)}
+        >
+          <div
+            className={styles.modalCard}
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className={styles.modalTitle}>Reset Device</h3>
             <p className={styles.modalText}>
               Remove this device binding from the license? The next validation may bind again if allowed.
             </p>
+
             <div className={styles.modalActions}>
-              <button className={styles.btnGhost} onClick={() => setConfirmOpen(false)} disabled={loading}>
+              <button
+                type="button"
+                className={styles.btnGhost}
+                onClick={() => setConfirmOpen(false)}
+                disabled={loading}
+              >
                 Cancel
               </button>
-              <button className={styles.btnDanger} onClick={resetDevice} disabled={loading}>
-                {loading ? 'Resetting...' : 'Confirm Reset'}
+
+              <button
+                type="button"
+                className={styles.btnDanger}
+                onClick={resetDevice}
+                disabled={loading}
+              >
+                <span className={styles.btnInline}>
+                  <RotateCcw size={15} strokeWidth={2} />
+                  {loading ? 'Resetting...' : 'Confirm Reset'}
+                </span>
               </button>
             </div>
           </div>
