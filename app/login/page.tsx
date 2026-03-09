@@ -16,7 +16,7 @@ return (
         <p className={styles.eyebrow}>Secure HWID Authentication</p>
         <h1 className={styles.title}>Thunder Tool HWID Panel</h1>
         <p className={styles.subtitle}>
-          A centralized management panel for Thunder Tool's ImGui menu authentication system. 
+          A centralized management panel for Thunder Tool&apos;s ImGui menu authentication system. 
           Manage licenses, bind hardware IDs, and monitor real-time authorization activity 
           through a secure and streamlined dashboard.
         </p>

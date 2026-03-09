@@ -16,6 +16,7 @@ ADMIN_SESSION_SECRET=optional-extra-secret
 
 ```sql
 -- file: supabase/migrations/20260309_hwid_hardening.sql
+-- file: supabase/migrations/20260309_admin_audit_logs.sql
 ```
 
 3. Run the development server:

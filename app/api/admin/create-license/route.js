@@ -1,8 +1,10 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import {
+  getAdminUsernameFromRequest,
   isAdminAuthConfigured,
   isAdminSessionFromRequest,
 } from '@/lib/adminSession';
+import { writeAdminAuditLog } from '@/lib/adminAuditLog';
 import { createLicenseBodySchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
@@ -33,6 +35,7 @@ export async function POST(req) {
     }
 
     const { licenseKey, maxDevices, expiresAt } = parsed.data;
+    const adminUsername = await getAdminUsernameFromRequest(req);
 
     const { data, error } = await supabaseAdmin
       .from('licenses')
@@ -51,6 +54,19 @@ export async function POST(req) {
         { status: 400 }
       );
     }
+
+    await writeAdminAuditLog({
+      adminUsername,
+      actionType: 'create_license',
+      targetType: 'license',
+      targetId: data.id,
+      targetValue: data.license_key,
+      metadata: {
+        status: data.status,
+        maxDevices: data.max_devices,
+        expiresAt: data.expires_at,
+      },
+    });
 
     return NextResponse.json({
       success: true,
