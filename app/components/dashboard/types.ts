@@ -9,6 +9,7 @@ export type LicenseRow = {
 
 export type DeviceRow = {
   id: string;
+  license_id: string | null;
   hwid_hash: string;
   device_name: string | null;
   status: string;

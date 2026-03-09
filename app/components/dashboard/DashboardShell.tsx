@@ -255,6 +255,7 @@ export default function DashboardShell({
           {view === 'licenses' ? (
             <LicensesTable
               licenses={filteredData.licenses}
+              devices={devices}
               onLicenseDeleted={handleLicenseDeleted}
               onLicenseUpdated={handleLicenseUpdated}
               pushToast={pushToast}

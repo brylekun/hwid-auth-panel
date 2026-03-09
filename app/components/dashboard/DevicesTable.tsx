@@ -51,16 +51,6 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
   const safePage = Math.min(page, totalPages);
   const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  function toggleSort(column: 'hwid_hash' | 'device_name' | 'status' | 'first_seen_at' | 'last_seen_at') {
-    if (sortBy === column) {
-      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-
-    setSortBy(column);
-    setSortDir('asc');
-  }
-
   function badgeClass(status: string | null) {
     return `${styles.badge} ${status === 'active' ? styles.active : styles.inactive}`;
   }
@@ -113,59 +103,65 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
           <option value="inactive">Inactive</option>
         </select>
       </div>
-      {filtered.length === 0 ? <p className={styles.empty}>No devices found.</p> : null}
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('hwid_hash')}>HWID Hash<span className={styles.sortIndicator}>{sortBy === 'hwid_hash' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('device_name')}>Device Name<span className={styles.sortIndicator}>{sortBy === 'device_name' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('status')}>Status<span className={styles.sortIndicator}>{sortBy === 'status' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('first_seen_at')}>First Seen<span className={styles.sortIndicator}>{sortBy === 'first_seen_at' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-              <th><button className={styles.sortBtn} onClick={() => toggleSort('last_seen_at')}>Last Seen<span className={styles.sortIndicator}>{sortBy === 'last_seen_at' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paged.map((device) => (
-              <tr key={device.id} onClick={() => setSelectedDetails(device)}>
-                <td>{maskValue(device.hwid_hash, showSensitive, 6)}</td>
-                <td>{device.device_name || 'Unknown'}</td>
-                <td><span className={badgeClass(device.status)}>{device.status || 'inactive'}</span></td>
-                <td>{formatDateTime(device.first_seen_at)}</td>
-                <td>{formatDateTime(device.last_seen_at)}</td>
-                <td onClick={(event) => event.stopPropagation()}>
-                  <ResetDeviceButton
-                    deviceId={device.id}
-                    onReset={onDeviceReset}
-                    pushToast={pushToast}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className={styles.licenseToolsRow}>
+        <select
+          value={sortBy}
+          onChange={(event) =>
+            setSortBy(
+              event.target.value as 'hwid_hash' | 'device_name' | 'status' | 'first_seen_at' | 'last_seen_at'
+            )
+          }
+          className={styles.select}
+        >
+          <option value="last_seen_at">Sort: Last Seen</option>
+          <option value="first_seen_at">Sort: First Seen</option>
+          <option value="device_name">Sort: Device Name</option>
+          <option value="hwid_hash">Sort: HWID</option>
+          <option value="status">Sort: Status</option>
+        </select>
+        <select
+          value={sortDir}
+          onChange={(event) => setSortDir(event.target.value as 'asc' | 'desc')}
+          className={styles.select}
+        >
+          <option value="desc">Direction: Desc</option>
+          <option value="asc">Direction: Asc</option>
+        </select>
       </div>
-      <div className={styles.mobileList}>
+      {filtered.length === 0 ? <p className={styles.empty}>No devices found.</p> : null}
+      <div className={styles.licenseCards}>
         {paged.map((device) => (
-          <article key={device.id} className={styles.mobileCard}>
-            <div className={styles.mobileRow}>
-              <span className={styles.mobileLabel}>HWID</span>
-              <span>{maskValue(device.hwid_hash, showSensitive, 6)}</span>
-            </div>
-            <div className={styles.mobileRow}>
-              <span className={styles.mobileLabel}>Device</span>
-              <span>{device.device_name || 'Unknown'}</span>
-            </div>
-            <div className={styles.mobileRow}>
-              <span className={styles.mobileLabel}>Status</span>
+          <article
+            key={device.id}
+            className={styles.licenseCard}
+            onClick={() => setSelectedDetails(device)}
+          >
+            <div className={styles.licenseCardHead}>
+              <span className={styles.badgeClassless}>Device</span>
               <span className={badgeClass(device.status)}>{device.status || 'inactive'}</span>
             </div>
-            <div className={styles.mobileRow}>
-              <span className={styles.mobileLabel}>Last Seen</span>
-              <span>{formatDateTime(device.last_seen_at)}</span>
+            <div className={styles.licenseCardKey}>
+              <span className={styles.keyCell}>{maskValue(device.hwid_hash, showSensitive, 6)}</span>
             </div>
-            <ResetDeviceButton deviceId={device.id} onReset={onDeviceReset} pushToast={pushToast} />
+            <div className={styles.licenseFacts}>
+              <div className={styles.licenseFact}>
+                <span className={styles.mobileLabel}>Device Name:</span>
+                <span className={styles.licenseFactValue}>{device.device_name || 'Unknown'}</span>
+              </div>
+              <div className={styles.licenseFact}>
+                <span className={styles.mobileLabel}>First Seen:</span>
+                <span className={styles.licenseFactValue}>{formatDateTime(device.first_seen_at)}</span>
+              </div>
+            </div>
+            <div className={styles.licenseCardMeta}>
+              <div className={styles.licenseCardMetaItem}>
+                <p className={styles.mobileLabel}>Last Seen</p>
+                <p className={styles.licenseFactValue}>{formatDateTime(device.last_seen_at)}</p>
+              </div>
+            </div>
+            <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
+              <ResetDeviceButton deviceId={device.id} onReset={onDeviceReset} pushToast={pushToast} />
+            </div>
           </article>
         ))}
       </div>
