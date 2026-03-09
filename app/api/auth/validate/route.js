@@ -172,6 +172,7 @@ async function legacyBindDevice(licenseKey, hwidHash, deviceName) {
     license_id: license.id,
     hwid_hash: hwidHash,
     device_name: deviceName || 'Unknown device',
+    status: 'active',
   });
 
   if (insertError) {

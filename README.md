@@ -21,6 +21,7 @@ AUTH_RATE_LIMIT_MAX_PER_LICENSE=20
 -- file: supabase/migrations/20260309_hwid_hardening.sql
 -- file: supabase/migrations/20260309_admin_audit_logs.sql
 -- file: supabase/migrations/20260309_auth_logs_rate_limit.sql
+-- file: supabase/migrations/20260309_devices_status_active.sql
 ```
 
 3. Run the development server:
