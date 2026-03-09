@@ -291,11 +291,16 @@ return (
               <div>
                 <p className={styles.sidebarFooterTitle}>Admin</p>
                 <p className={styles.sidebarFooterMeta}>
-                  HWID Administrator
+                  <ShieldCheck
+                    size={14}
+                    strokeWidth={2}
+                    className={styles.sidebarFooterMetaIcon}
+                  />
+                  <span>HWID Administrator</span>
                 </p>
               </div>
 
-              <AdminLogoutButton className={styles.sidebarLogoutBtn} />
+              <AdminLogoutButton className={styles.sidebarLogoutBtn} showIcon />
             </div>
           </div>
         </aside>

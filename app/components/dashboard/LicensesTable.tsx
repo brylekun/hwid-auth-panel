@@ -10,7 +10,6 @@ import {
   MoreHorizontal,
   Pencil,
   Power,
-  ShieldAlert,
   Smartphone,
   Trash2,
 } from 'lucide-react';
@@ -28,13 +27,12 @@ type Props = {
 
 const PAGE_SIZE = 8;
 
-function isExpired(expiresAt: string | null) {
-  if (!expiresAt) return false;
+function getDerivedStatus(license: LicenseRow) {
+  if (getLicenseExpiryInfo(license.expires_at).state === 'expired') {
+    return 'expired' as const;
+  }
 
-  const expiryMs = new Date(expiresAt).getTime();
-  if (Number.isNaN(expiryMs)) return false;
-
-  return expiryMs <= Date.now();
+  return license.status === 'active' ? 'active' as const : 'inactive' as const;
 }
 
 function toLocalDateTimeInputValue(date: Date) {
@@ -79,11 +77,7 @@ export default function LicensesTable({
     const q = normalize(query);
 
     return licenses.filter((license) => {
-      const derivedStatus = isExpired(license.expires_at)
-        ? 'expired'
-        : license.status === 'active'
-          ? 'active'
-          : 'inactive';
+      const derivedStatus = getDerivedStatus(license);
 
       const statusMatch =
         statusFilter === 'all'
@@ -156,8 +150,7 @@ export default function LicensesTable({
   }
 
   function getDisplayStatus(license: LicenseRow) {
-    if (isExpired(license.expires_at)) return 'expired';
-    return license.status === 'active' ? 'active' : 'inactive';
+    return getDerivedStatus(license);
   }
 
   async function updateLicense(
@@ -228,6 +221,12 @@ export default function LicensesTable({
     if (state === 'active') return `${styles.badge} ${styles.expiryActive}`;
     if (state === 'expired') return `${styles.badge} ${styles.expiryExpired}`;
     return `${styles.badge} ${styles.expiryNeutral}`;
+  }
+
+  function getExpirySummaryLabel(expiry: ReturnType<typeof getLicenseExpiryInfo>) {
+    if (expiry.state === 'never') return 'Never';
+    if (expiry.state === 'invalid') return 'Invalid expiration date';
+    return expiry.label;
   }
 
   function getUsedBy(licenseId: string) {
@@ -502,21 +501,8 @@ export default function LicensesTable({
               <div className={styles.licenseCardMeta}>
                 <div className={styles.licenseCardMetaItem}>
                   <div className={styles.expiryHeader}>
-                    <p className={styles.mobileLabel}>Expiry</p>
-                    <span className={getExpiryBadgeClass(expiry.state)}>
-                      {expiry.state === 'active'
-                        ? 'Active'
-                        : expiry.state === 'expired'
-                          ? 'Expired'
-                          : 'Never'}
-                    </span>
-                  </div>
-
-                  <div className={styles.expiryStack}>
-                    <span className={styles.expiryHint}>{expiry.label}</span>
-                    {expiry.state !== 'never' ? (
-                      <span className={styles.expiryDate}>{expiry.dateLabel}</span>
-                    ) : null}
+                    <p className={styles.mobileLabel}>Expiry:</p>
+                    <p className={styles.expiryInlineValue}>{getExpirySummaryLabel(expiry)}</p>
                   </div>
                 </div>
               </div>

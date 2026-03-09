@@ -77,6 +77,7 @@
   border-radius: 999px;
   background: #66e7ce;
   box-shadow: 0 0 0 4px rgba(102, 231, 206, 0.12);
+  animation: statusDotBlink 1.7s ease-in-out infinite;
 }
 
 .brandStatusText {
@@ -271,6 +272,14 @@
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebarFooterMetaIcon {
+  color: #8fe6cf;
+  flex-shrink: 0;
 }
 
 .sidebarLogoutBtn {
@@ -282,6 +291,9 @@
   color: #eaf3ff;
   cursor: pointer;
   font-weight: 650;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
     border-color 140ms ease,
     background-color 140ms ease,
@@ -1391,6 +1403,29 @@
   }
 }
 
+@keyframes statusDotBlink {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow:
+      0 0 0 4px rgba(102, 231, 206, 0.12),
+      0 0 10px rgba(102, 231, 206, 0.3);
+  }
+
+  50% {
+    opacity: 0.4;
+    box-shadow:
+      0 0 0 2px rgba(102, 231, 206, 0.08),
+      0 0 4px rgba(102, 231, 206, 0.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brandStatusDot {
+    animation: none;
+  }
+}
+
 .panelEyebrow {
   margin: 0 0 6px;
   color: #8fb7d8;
@@ -1872,7 +1907,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+}
+
+.expiryInlineValue {
+  margin: 0;
+  color: #c0d2ed;
+  font-size: 0.75rem;
 }
 
 .deviceActionSingle {
