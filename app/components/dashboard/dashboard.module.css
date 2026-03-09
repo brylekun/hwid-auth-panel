@@ -411,6 +411,50 @@
   flex-wrap: wrap;
 }
 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 11, 19, 0.66);
+  display: grid;
+  place-items: center;
+  z-index: 120;
+  padding: 16px;
+}
+
+.modalCard {
+  width: min(520px, 100%);
+  border: 1px solid #355270;
+  border-radius: 14px;
+  background:
+    linear-gradient(160deg, rgba(17, 32, 48, 0.95), rgba(10, 20, 33, 0.97)),
+    radial-gradient(circle at 90% 14%, rgba(36, 99, 145, 0.2), transparent 40%);
+  box-shadow: 0 22px 52px rgba(4, 10, 17, 0.55);
+  padding: 16px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.08rem;
+}
+
+.modalBody {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.modalText {
+  margin: 10px 0 0;
+  color: #a8c2dd;
+}
+
+.modalActions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .mobileLabel {
   color: #95a3b8;
 }

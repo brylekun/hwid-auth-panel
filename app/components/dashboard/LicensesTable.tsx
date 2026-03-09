@@ -26,6 +26,9 @@ export default function LicensesTable({
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState('');
+  const [actionType, setActionType] = useState<'edit' | 'status' | 'delete' | null>(null);
+  const [selected, setSelected] = useState<LicenseRow | null>(null);
+  const [draftKey, setDraftKey] = useState('');
 
   const filtered = useMemo(() => {
     const q = normalize(query);
@@ -77,10 +80,6 @@ export default function LicensesTable({
   }
 
   async function deleteLicense(licenseId: string) {
-    if (!confirm('Delete this license key?')) {
-      return;
-    }
-
     setBusyId(licenseId);
     try {
       const response = await fetch('/api/admin/delete-license', {
@@ -104,13 +103,49 @@ export default function LicensesTable({
     }
   }
 
-  function editKey(license: LicenseRow) {
-    const nextKey = prompt('Enter new license key', license.license_key);
-    if (!nextKey || nextKey.trim() === '' || nextKey.trim() === license.license_key) {
+  function openAction(type: 'edit' | 'status' | 'delete', license: LicenseRow) {
+    setActionType(type);
+    setSelected(license);
+    setDraftKey(license.license_key);
+  }
+
+  function closeAction() {
+    if (busyId) {
       return;
     }
 
-    void updateLicense(license.id, { licenseKey: nextKey.trim() });
+    setActionType(null);
+    setSelected(null);
+    setDraftKey('');
+  }
+
+  async function confirmAction() {
+    if (!selected || !actionType) {
+      return;
+    }
+
+    if (actionType === 'edit') {
+      const next = draftKey.trim();
+      if (!next || next === selected.license_key) {
+        pushToast('Enter a different license key', 'error');
+        return;
+      }
+
+      await updateLicense(selected.id, { licenseKey: next });
+      closeAction();
+      return;
+    }
+
+    if (actionType === 'status') {
+      await updateLicense(selected.id, {
+        status: selected.status === 'active' ? 'inactive' : 'active',
+      });
+      closeAction();
+      return;
+    }
+
+    await deleteLicense(selected.id);
+    closeAction();
   }
 
   return (
@@ -167,25 +202,21 @@ export default function LicensesTable({
                   <div className={styles.actionGroup}>
                     <button
                       className={styles.btnGhost}
-                      onClick={() => editKey(license)}
+                      onClick={() => openAction('edit', license)}
                       disabled={busyId === license.id}
                     >
                       Edit
                     </button>
                     <button
                       className={styles.btnGhost}
-                      onClick={() =>
-                        updateLicense(license.id, {
-                          status: license.status === 'active' ? 'inactive' : 'active',
-                        })
-                      }
+                      onClick={() => openAction('status', license)}
                       disabled={busyId === license.id}
                     >
                       {license.status === 'active' ? 'Ban' : 'Activate'}
                     </button>
                     <button
                       className={styles.btnDanger}
-                      onClick={() => deleteLicense(license.id)}
+                      onClick={() => openAction('delete', license)}
                       disabled={busyId === license.id}
                     >
                       Delete
@@ -219,25 +250,21 @@ export default function LicensesTable({
             <div className={styles.actionGroup}>
               <button
                 className={styles.btnGhost}
-                onClick={() => editKey(license)}
+                onClick={() => openAction('edit', license)}
                 disabled={busyId === license.id}
               >
                 Edit
               </button>
               <button
                 className={styles.btnGhost}
-                onClick={() =>
-                  updateLicense(license.id, {
-                    status: license.status === 'active' ? 'inactive' : 'active',
-                  })
-                }
+                onClick={() => openAction('status', license)}
                 disabled={busyId === license.id}
               >
                 {license.status === 'active' ? 'Ban' : 'Activate'}
               </button>
               <button
                 className={styles.btnDanger}
-                onClick={() => deleteLicense(license.id)}
+                onClick={() => openAction('delete', license)}
                 disabled={busyId === license.id}
               >
                 Delete
@@ -255,6 +282,48 @@ export default function LicensesTable({
           <button className={styles.btnGhost} disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
             Next
           </button>
+        </div>
+      ) : null}
+      {selected && actionType ? (
+        <div className={styles.modalOverlay} role="presentation" onClick={closeAction}>
+          <div className={styles.modalCard} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <h3 className={styles.modalTitle}>
+              {actionType === 'edit' ? 'Edit License Key' : actionType === 'status'
+                ? selected.status === 'active' ? 'Ban License' : 'Activate License'
+                : 'Delete License'}
+            </h3>
+            {actionType === 'edit' ? (
+              <div className={styles.modalBody}>
+                <p className={styles.modalText}>Update the key for this license entry.</p>
+                <input
+                  className={styles.input}
+                  value={draftKey}
+                  onChange={(event) => setDraftKey(event.target.value)}
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <p className={styles.modalText}>
+                {actionType === 'status'
+                  ? `Are you sure you want to ${selected.status === 'active' ? 'ban' : 'activate'} this license?`
+                  : 'Are you sure you want to delete this license? This cannot be undone.'}
+              </p>
+            )}
+            <div className={styles.modalActions}>
+              <button className={styles.btnGhost} onClick={closeAction} disabled={Boolean(busyId)}>
+                Cancel
+              </button>
+              <button
+                className={actionType === 'delete' ? styles.btnDanger : styles.btn}
+                onClick={() => void confirmAction()}
+                disabled={Boolean(busyId)}
+              >
+                {busyId ? 'Processing...' : actionType === 'edit' ? 'Save' : actionType === 'status'
+                  ? selected.status === 'active' ? 'Ban' : 'Activate'
+                  : 'Delete'}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </section>
