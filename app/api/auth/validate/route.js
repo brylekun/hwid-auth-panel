@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { normalizeLicenseKey } from '@/lib/licenseKey';
+import { deactivateExpiredLicenseByKey } from '@/lib/licenseExpirySync';
 import { validateBodySchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
@@ -273,6 +274,8 @@ export async function POST(req) {
 
     if (decision.success) {
       await syncDeviceActiveState(normalizedLicenseKey, hwidHash, deviceName);
+    } else if (decision.reason === 'license_expired') {
+      await deactivateExpiredLicenseByKey(normalizedLicenseKey);
     }
 
     await writeAuthLog(normalizedLicenseKey, hwidHash, decision.success, decision.reason, clientIp);

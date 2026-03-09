@@ -783,6 +783,12 @@
   background: rgba(101, 34, 47, 0.48);
 }
 
+.statusExpired {
+  border-color: #9d4f5c;
+  color: #ffafbc;
+  background: rgba(101, 34, 47, 0.48);
+}
+
 .mobileList {
   display: none;
   gap: 10px;
@@ -830,6 +836,17 @@
   border: 1px solid #1f2c42;
   border-radius: 9px;
   background: rgba(7, 11, 18, 0.86);
+}
+
+.hashValue {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  color: #deebff;
+  font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .licenseCardMeta {

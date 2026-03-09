@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import ResetDeviceButton from '../ResetDeviceButton';
-import { formatDateTime, maskValue, normalize } from './format';
+import { formatDateTime, normalize } from './format';
 import styles from './dashboard.module.css';
 import type { DeviceRow } from './types';
 
@@ -53,6 +53,22 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
 
   function badgeClass(status: string | null) {
     return `${styles.badge} ${status === 'active' ? styles.active : styles.inactive}`;
+  }
+
+  function formatDeviceHwid(value: string, reveal: boolean) {
+    if (reveal) {
+      return value;
+    }
+
+    if (!value) {
+      return 'N/A';
+    }
+
+    if (value.length <= 14) {
+      return `******${value.slice(-6)}`;
+    }
+
+    return `${value.slice(0, 4)}...${value.slice(-6)}`;
   }
 
   return (
@@ -141,7 +157,7 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
               <span className={badgeClass(device.status)}>{device.status || 'inactive'}</span>
             </div>
             <div className={styles.licenseCardKey}>
-              <span className={styles.keyCell}>{maskValue(device.hwid_hash, showSensitive, 6)}</span>
+              <span className={styles.hashValue}>{formatDeviceHwid(device.hwid_hash, showSensitive)}</span>
             </div>
             <div className={styles.licenseFacts}>
               <div className={styles.licenseFact}>

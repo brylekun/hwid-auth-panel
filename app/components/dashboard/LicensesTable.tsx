@@ -15,6 +15,19 @@ type Props = {
 
 const PAGE_SIZE = 8;
 
+function isExpired(expiresAt: string | null) {
+  if (!expiresAt) {
+    return false;
+  }
+
+  const expiryMs = new Date(expiresAt).getTime();
+  if (Number.isNaN(expiryMs)) {
+    return false;
+  }
+
+  return expiryMs <= Date.now();
+}
+
 function toLocalDateTimeInputValue(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -22,6 +35,19 @@ function toLocalDateTimeInputValue(date: Date) {
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function toIsoFromLocalDateTimeInput(value: string) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
 }
 
 export default function LicensesTable({
@@ -47,7 +73,17 @@ export default function LicensesTable({
   const filtered = useMemo(() => {
     const q = normalize(query);
     return licenses.filter((license) => {
-      const statusMatch = statusFilter === 'all' || license.status === statusFilter;
+      const derivedStatus = isExpired(license.expires_at)
+        ? 'expired'
+        : license.status === 'active'
+          ? 'active'
+          : 'inactive';
+      const statusMatch =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'active'
+            ? derivedStatus === 'active'
+            : derivedStatus === 'inactive' || derivedStatus === 'expired';
       if (!statusMatch) {
         return false;
       }
@@ -108,7 +144,19 @@ export default function LicensesTable({
   }, [devices]);
 
   function badgeClass(status: string) {
+    if (status === 'expired') {
+      return `${styles.badge} ${styles.statusExpired}`;
+    }
+
     return `${styles.badge} ${status === 'active' ? styles.active : styles.inactive}`;
+  }
+
+  function getDisplayStatus(license: LicenseRow) {
+    if (isExpired(license.expires_at)) {
+      return 'expired';
+    }
+
+    return license.status === 'active' ? 'active' : 'inactive';
   }
 
   async function updateLicense(
@@ -270,7 +318,16 @@ export default function LicensesTable({
           Math.abs(originalExpiryMs - nextExpiryMs) >= 60 * 1000);
 
       if (expiryChanged) {
-        payload.expiresAt = draftExpiresAt || null;
+        if (!draftExpiresAt) {
+          payload.expiresAt = null;
+        } else {
+          const isoValue = toIsoFromLocalDateTimeInput(draftExpiresAt);
+          if (!isoValue) {
+            pushToast('Invalid expiration date', 'error');
+            return;
+          }
+          payload.expiresAt = isoValue;
+        }
       }
 
       if (!payload.licenseKey && payload.expiresAt === undefined) {
@@ -378,7 +435,7 @@ export default function LicensesTable({
           >
             <div className={styles.licenseCardHead}>
               <span className={styles.badgeClassless}>License</span>
-              <span className={badgeClass(license.status)}>{license.status}</span>
+              <span className={badgeClass(getDisplayStatus(license))}>{getDisplayStatus(license)}</span>
             </div>
             <div className={styles.licenseCardKey}>
               <span className={styles.keyCell}>
@@ -576,7 +633,7 @@ export default function LicensesTable({
             </div>
             <div className={styles.drawerGrid}>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>License Key</p><p className={styles.drawerValue}>{selectedDetails.license_key}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Status</p><p className={styles.drawerValue}>{selectedDetails.status}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Status</p><p className={styles.drawerValue}>{getDisplayStatus(selectedDetails)}</p></div>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>Used by</p><p className={styles.drawerValue}>{getUsedBy(selectedDetails.id)}</p></div>
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>Expiry</p>
