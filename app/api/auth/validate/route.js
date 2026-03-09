@@ -90,6 +90,40 @@ async function writeAuthLog(licenseKey, hwidHash, success, reason, clientIp) {
   }
 }
 
+async function syncDeviceActiveState(licenseKey, hwidHash, deviceName) {
+  const { data: license, error: licenseError } = await supabaseAdmin
+    .from('licenses')
+    .select('id')
+    .eq('license_key', licenseKey)
+    .maybeSingle();
+
+  if (licenseError || !license) {
+    if (licenseError) {
+      console.error('Failed to load license for device sync:', licenseError);
+    }
+    return;
+  }
+
+  const updatePayload = {
+    status: 'active',
+    last_seen_at: new Date().toISOString(),
+  };
+
+  if (deviceName && String(deviceName).trim() !== '') {
+    updatePayload.device_name = String(deviceName).trim();
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('devices')
+    .update(updatePayload)
+    .eq('license_id', license.id)
+    .eq('hwid_hash', hwidHash);
+
+  if (updateError) {
+    console.error('Failed to sync device active state:', updateError);
+  }
+}
+
 async function bindDeviceWithRpc(licenseKey, hwidHash, deviceName) {
   const { data, error } = await supabaseAdmin.rpc('bind_device_if_allowed', {
     p_license_key: licenseKey,
@@ -236,6 +270,10 @@ export async function POST(req) {
       status: decision.success ? 200 : 403,
       message: decision.success ? 'Authorized' : 'Access denied',
     };
+
+    if (decision.success) {
+      await syncDeviceActiveState(normalizedLicenseKey, hwidHash, deviceName);
+    }
 
     await writeAuthLog(normalizedLicenseKey, hwidHash, decision.success, decision.reason, clientIp);
 

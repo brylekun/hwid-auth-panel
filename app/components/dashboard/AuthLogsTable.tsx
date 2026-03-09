@@ -9,7 +9,7 @@ type Props = {
   logs: AuthLogRow[];
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 
 export default function AuthLogsTable({ logs }: Props) {
   const [sortBy, setSortBy] = useState<'license_key' | 'hwid_hash' | 'result' | 'reason' | 'created_at'>('created_at');
@@ -165,7 +165,7 @@ export default function AuthLogsTable({ logs }: Props) {
           </article>
         ))}
       </div>
-      {filtered.length > 0 ? (
+      {filtered.length > PAGE_SIZE ? (
         <div className={styles.pagination}>
           <button className={styles.btnGhost} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
             Prev
