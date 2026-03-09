@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo } from 'react';
+import { toManilaDayKey } from './format';
 import styles from './dashboard.module.css';
 import type { AuthLogRow, LicenseRow } from './types';
 
 type Props = {
   licenses: LicenseRow[];
   logs: AuthLogRow[];
+  referenceTime: number;
 };
 
 type Point = {
@@ -41,24 +43,22 @@ function buildPolyline(points: Point[]) {
     .join(' ');
 }
 
-export default function TrendWidgets({ licenses, logs }: Props) {
+export default function TrendWidgets({ licenses, logs, referenceTime }: Props) {
   const { growthSeries, authSeries, approvalRate, totalAttempts } = useMemo(() => {
     const days: string[] = [];
     for (let i = 6; i >= 0; i -= 1) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      days.push(d.toISOString().slice(0, 10));
+      days.push(toManilaDayKey(referenceTime - i * 24 * 60 * 60 * 1000));
     }
 
     const licenseCounts = new Map<string, number>();
     for (const license of licenses) {
-      const day = new Date(license.created_at).toISOString().slice(0, 10);
+      const day = toManilaDayKey(license.created_at);
       licenseCounts.set(day, (licenseCounts.get(day) || 0) + 1);
     }
 
     const authCounts = new Map<string, { approved: number; total: number }>();
     for (const log of logs) {
-      const day = new Date(log.created_at).toISOString().slice(0, 10);
+      const day = toManilaDayKey(log.created_at);
       const current = authCounts.get(day) || { approved: 0, total: 0 };
       current.total += 1;
       if (log.result === 'approved') {
@@ -80,7 +80,7 @@ export default function TrendWidgets({ licenses, logs }: Props) {
       approvalRate: percent(approvedTotal, logs.length),
       totalAttempts: logs.length,
     };
-  }, [licenses, logs]);
+  }, [licenses, logs, referenceTime]);
 
   const growthLine = buildPolyline(growthSeries);
   const authLine = buildPolyline(authSeries);

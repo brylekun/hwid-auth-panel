@@ -10,6 +10,7 @@ import LicensesTable from './LicensesTable';
 import OverviewCards from './OverviewCards';
 import TrendWidgets from './TrendWidgets';
 import styles from './dashboard.module.css';
+import { getTodayManilaDayKey, toManilaDayKey } from './format';
 import type { AdminAuditLogRow, AuthLogRow, DeviceRow, LicenseRow } from './types';
 
 type Toast = {
@@ -89,11 +90,10 @@ export default function DashboardShell({
   }, [licenses.length, devices.length, logs.length, adminAuditLogs.length]);
 
   const filteredData = useMemo(() => {
-    const startOfToday = new Date(referenceTime);
-    startOfToday.setHours(0, 0, 0, 0);
+    const manilaTodayKey = getTodayManilaDayKey(referenceTime);
 
     const inLast24h = (value: string) => new Date(value).getTime() >= referenceTime - 24 * 60 * 60 * 1000;
-    const inToday = (value: string) => new Date(value).getTime() >= startOfToday.getTime();
+    const inToday = (value: string) => toManilaDayKey(value) === manilaTodayKey;
 
     if (quickFilter === 'all') {
       return { licenses, devices, logs, adminAuditLogs };
@@ -293,7 +293,11 @@ export default function DashboardShell({
           </div>
 
           <div id="trends" className={styles.anchorSection}>
-            <TrendWidgets licenses={filteredData.licenses} logs={filteredData.logs} />
+            <TrendWidgets
+              licenses={filteredData.licenses}
+              logs={filteredData.logs}
+              referenceTime={referenceTime}
+            />
           </div>
 
           <div id="licenses" className={styles.anchorSection}>

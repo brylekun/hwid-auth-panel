@@ -1,3 +1,24 @@
+export const MANILA_TIMEZONE = 'Asia/Manila';
+
+const manilaDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: MANILA_TIMEZONE,
+  year: 'numeric',
+  month: 'short',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: true,
+  timeZoneName: 'short',
+});
+
+const manilaDayFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: MANILA_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 export function maskValue(value: string, show: boolean, visible = 4) {
   if (show) {
     return value;
@@ -20,7 +41,20 @@ export function formatDateTime(value: string | null) {
     return value;
   }
 
-  return parsed.toLocaleString();
+  return manilaDateTimeFormatter.format(parsed);
+}
+
+export function toManilaDayKey(value: string | number | Date) {
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  return manilaDayFormatter.format(parsed);
+}
+
+export function getTodayManilaDayKey(referenceTime = Date.now()) {
+  return toManilaDayKey(referenceTime);
 }
 
 export function formatDurationLabel(ms: number) {
