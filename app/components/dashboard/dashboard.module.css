@@ -1421,7 +1421,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brandStatusDot {
+  .brandStatusDot,
+  .logDotPulse {
     animation: none;
   }
 }
@@ -1473,6 +1474,10 @@
   flex-shrink: 0;
 }
 
+.logDotPulse {
+  animation: authLogDotPulse 1.55s ease-in-out infinite;
+}
+
 .logDotSuccess {
   background: #80f0be;
   box-shadow: 0 0 0 4px rgba(128, 240, 190, 0.12);
@@ -1486,6 +1491,19 @@
 .logDotNeutral {
   background: #8aa8ff;
   box-shadow: 0 0 0 4px rgba(138, 168, 255, 0.12);
+}
+
+@keyframes authLogDotPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(0.72);
+  }
 }
 
 .logMain {

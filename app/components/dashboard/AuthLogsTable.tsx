@@ -115,7 +115,7 @@ export default function AuthLogsTable({ logs }: Props) {
             onClick={() => setSelectedDetails(log)}
           >
             <span
-              className={`${styles.logDot} ${
+              className={`${styles.logDot} ${styles.logDotPulse} ${
                 log.result === 'approved' ? styles.logDotSuccess : styles.logDotDanger
               }`}
               aria-hidden="true"
