@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { normalizeLicenseKey } from '@/lib/licenseKey';
 import { validateBodySchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
@@ -204,11 +205,19 @@ export async function POST(req) {
     }
 
     const { licenseKey, hwidHash, deviceName } = parsed.data;
+    const normalizedLicenseKey = normalizeLicenseKey(licenseKey);
+    if (!normalizedLicenseKey) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid license format' },
+        { status: 400 }
+      );
+    }
+
     const clientIp = getClientIp(req);
-    const rateLimitCheck = await checkRateLimit(licenseKey, clientIp);
+    const rateLimitCheck = await checkRateLimit(normalizedLicenseKey, clientIp);
 
     if (rateLimitCheck.limited) {
-      await writeAuthLog(licenseKey, hwidHash, false, rateLimitCheck.reason, clientIp);
+      await writeAuthLog(normalizedLicenseKey, hwidHash, false, rateLimitCheck.reason, clientIp);
 
       const mappedLimitResponse = reasonResponseMap[rateLimitCheck.reason];
       return NextResponse.json(
@@ -222,14 +231,14 @@ export async function POST(req) {
       );
     }
 
-    let decision = await bindDeviceWithRpc(licenseKey, hwidHash, deviceName);
+    let decision = await bindDeviceWithRpc(normalizedLicenseKey, hwidHash, deviceName);
 
     if (decision.error) {
       if (!isMissingRpcError(decision.error)) {
         throw decision.error;
       }
 
-      decision = await legacyBindDevice(licenseKey, hwidHash, deviceName);
+      decision = await legacyBindDevice(normalizedLicenseKey, hwidHash, deviceName);
     }
 
     const mappedResponse = reasonResponseMap[decision.reason] || {
@@ -237,7 +246,7 @@ export async function POST(req) {
       message: decision.success ? 'Authorized' : 'Access denied',
     };
 
-    await writeAuthLog(licenseKey, hwidHash, decision.success, decision.reason, clientIp);
+    await writeAuthLog(normalizedLicenseKey, hwidHash, decision.success, decision.reason, clientIp);
 
     return NextResponse.json(
       { success: decision.success, message: mappedResponse.message },

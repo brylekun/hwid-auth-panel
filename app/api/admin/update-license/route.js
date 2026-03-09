@@ -5,6 +5,7 @@ import {
   isAdminSessionFromRequest,
 } from '@/lib/adminSession';
 import { writeAdminAuditLog } from '@/lib/adminAuditLog';
+import { normalizeLicenseKey } from '@/lib/licenseKey';
 import { updateLicenseBodySchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
@@ -53,7 +54,15 @@ export async function POST(req) {
     const payload = {};
 
     if (licenseKey) {
-      payload.license_key = licenseKey;
+      const normalizedLicenseKey = normalizeLicenseKey(licenseKey);
+      if (!normalizedLicenseKey) {
+        return NextResponse.json(
+          { success: false, message: 'licenseKey must be 20 alphanumeric chars (format XXXXX-XXXXX-XXXXX-XXXXX)' },
+          { status: 400 }
+        );
+      }
+
+      payload.license_key = normalizedLicenseKey;
     }
 
     if (status) {

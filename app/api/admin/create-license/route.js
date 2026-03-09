@@ -5,6 +5,7 @@ import {
   isAdminSessionFromRequest,
 } from '@/lib/adminSession';
 import { writeAdminAuditLog } from '@/lib/adminAuditLog';
+import { normalizeLicenseKey } from '@/lib/licenseKey';
 import { createLicenseBodySchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
@@ -35,12 +36,20 @@ export async function POST(req) {
     }
 
     const { licenseKey, maxDevices, expiresAt } = parsed.data;
+    const normalizedLicenseKey = normalizeLicenseKey(licenseKey);
+    if (!normalizedLicenseKey) {
+      return NextResponse.json(
+        { success: false, message: 'licenseKey must be 20 alphanumeric chars (format XXXXX-XXXXX-XXXXX-XXXXX)' },
+        { status: 400 }
+      );
+    }
+
     const adminUsername = await getAdminUsernameFromRequest(req);
 
     const { data, error } = await supabaseAdmin
       .from('licenses')
       .insert({
-        license_key: licenseKey,
+        license_key: normalizedLicenseKey,
         status: 'active',
         max_devices: maxDevices,
         expires_at: expiresAt || null,
