@@ -10,6 +10,9 @@ SUPABASE_SECRET_KEY=...
 ADMIN_PANEL_USERNAME=admin
 ADMIN_PANEL_PASSWORD=change-me
 ADMIN_SESSION_SECRET=optional-extra-secret
+AUTH_RATE_LIMIT_WINDOW_SECONDS=60
+AUTH_RATE_LIMIT_MAX_PER_IP=60
+AUTH_RATE_LIMIT_MAX_PER_LICENSE=20
 ```
 
 2. Apply DB hardening migration in Supabase SQL editor:
@@ -17,6 +20,7 @@ ADMIN_SESSION_SECRET=optional-extra-secret
 ```sql
 -- file: supabase/migrations/20260309_hwid_hardening.sql
 -- file: supabase/migrations/20260309_admin_audit_logs.sql
+-- file: supabase/migrations/20260309_auth_logs_rate_limit.sql
 ```
 
 3. Run the development server:

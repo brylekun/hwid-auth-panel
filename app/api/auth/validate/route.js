@@ -2,6 +2,10 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { validateBodySchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
+const DEFAULT_RATE_LIMIT_WINDOW_SECONDS = 60;
+const DEFAULT_MAX_ATTEMPTS_PER_IP = 60;
+const DEFAULT_MAX_ATTEMPTS_PER_LICENSE = 20;
+
 const reasonResponseMap = {
   known_device: { status: 200, message: 'Authorized' },
   new_device_bound: { status: 200, message: 'Authorized and bound' },
@@ -9,6 +13,8 @@ const reasonResponseMap = {
   license_inactive: { status: 403, message: 'License inactive' },
   license_expired: { status: 403, message: 'License expired' },
   device_limit_reached: { status: 403, message: 'Device limit reached' },
+  rate_limited_ip: { status: 429, message: 'Too many attempts from this IP' },
+  rate_limited_license: { status: 429, message: 'Too many attempts for this license' },
 };
 
 function isMissingRpcError(error) {
@@ -18,12 +24,71 @@ function isMissingRpcError(error) {
   );
 }
 
-async function writeAuthLog(licenseKey, hwidHash, success, reason) {
+function getNumberEnv(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+}
+
+function getClientIp(req) {
+  const forwardedFor = req.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    const first = forwardedFor.split(',')[0]?.trim();
+    if (first) {
+      return first;
+    }
+  }
+
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp.trim();
+  }
+
+  return null;
+}
+
+async function countRecentAttempts(column, value, sinceIso) {
+  const { count, error } = await supabaseAdmin
+    .from('auth_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq(column, value)
+    .gte('created_at', sinceIso);
+
+  if (error) {
+    console.error(`Rate limit count failed for ${column}:`, error.message || error);
+    return null;
+  }
+
+  return count || 0;
+}
+
+async function checkRateLimit(licenseKey, clientIp) {
+  const windowSeconds = getNumberEnv('AUTH_RATE_LIMIT_WINDOW_SECONDS', DEFAULT_RATE_LIMIT_WINDOW_SECONDS);
+  const maxPerIp = getNumberEnv('AUTH_RATE_LIMIT_MAX_PER_IP', DEFAULT_MAX_ATTEMPTS_PER_IP);
+  const maxPerLicense = getNumberEnv('AUTH_RATE_LIMIT_MAX_PER_LICENSE', DEFAULT_MAX_ATTEMPTS_PER_LICENSE);
+  const sinceIso = new Date(Date.now() - windowSeconds * 1000).toISOString();
+
+  if (clientIp) {
+    const ipAttempts = await countRecentAttempts('client_ip', clientIp, sinceIso);
+    if (ipAttempts !== null && ipAttempts >= maxPerIp) {
+      return { limited: true, reason: 'rate_limited_ip', retryAfter: windowSeconds };
+    }
+  }
+
+  const licenseAttempts = await countRecentAttempts('license_key', licenseKey, sinceIso);
+  if (licenseAttempts !== null && licenseAttempts >= maxPerLicense) {
+    return { limited: true, reason: 'rate_limited_license', retryAfter: windowSeconds };
+  }
+
+  return { limited: false };
+}
+
+async function writeAuthLog(licenseKey, hwidHash, success, reason, clientIp) {
   const { error } = await supabaseAdmin.from('auth_logs').insert({
     license_key: licenseKey,
     hwid_hash: hwidHash,
     result: success ? 'approved' : 'denied',
     reason,
+    client_ip: clientIp,
   });
 
   if (error) {
@@ -139,6 +204,23 @@ export async function POST(req) {
     }
 
     const { licenseKey, hwidHash, deviceName } = parsed.data;
+    const clientIp = getClientIp(req);
+    const rateLimitCheck = await checkRateLimit(licenseKey, clientIp);
+
+    if (rateLimitCheck.limited) {
+      await writeAuthLog(licenseKey, hwidHash, false, rateLimitCheck.reason, clientIp);
+
+      const mappedLimitResponse = reasonResponseMap[rateLimitCheck.reason];
+      return NextResponse.json(
+        { success: false, message: mappedLimitResponse.message },
+        {
+          status: mappedLimitResponse.status,
+          headers: {
+            'Retry-After': String(rateLimitCheck.retryAfter),
+          },
+        }
+      );
+    }
 
     let decision = await bindDeviceWithRpc(licenseKey, hwidHash, deviceName);
 
@@ -155,7 +237,7 @@ export async function POST(req) {
       message: decision.success ? 'Authorized' : 'Access denied',
     };
 
-    await writeAuthLog(licenseKey, hwidHash, decision.success, decision.reason);
+    await writeAuthLog(licenseKey, hwidHash, decision.success, decision.reason, clientIp);
 
     return NextResponse.json(
       { success: decision.success, message: mappedResponse.message },

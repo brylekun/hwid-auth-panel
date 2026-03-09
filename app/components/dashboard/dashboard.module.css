@@ -4,6 +4,84 @@
   padding: 30px 18px 70px;
 }
 
+.appShell {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.mainColumn {
+  min-width: 0;
+}
+
+.sidebar {
+  position: sticky;
+  top: 20px;
+  height: fit-content;
+  border: 1px solid #2a3f59;
+  border-radius: 16px;
+  padding: 12px;
+  background:
+    linear-gradient(164deg, rgba(29, 48, 71, 0.6), rgba(12, 22, 35, 0.82)),
+    radial-gradient(circle at 90% 18%, rgba(40, 106, 155, 0.26), transparent 34%);
+  box-shadow: 0 16px 32px rgba(5, 11, 19, 0.34);
+}
+
+.sidebarTitle {
+  margin: 0 0 10px;
+  color: #8fb9e4;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.73rem;
+}
+
+.sideLink {
+  display: block;
+  text-decoration: none;
+  color: #d5e8fb;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.sideLink:hover {
+  border-color: #45698d;
+  background: rgba(20, 39, 59, 0.8);
+}
+
+.sideLinkActive {
+  border-color: #3e79ad;
+  background: linear-gradient(180deg, rgba(47, 116, 174, 0.45), rgba(34, 90, 139, 0.45));
+  color: #eef6ff;
+}
+
+.quickFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filterChip {
+  border: 1px solid #395675;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: rgba(17, 32, 49, 0.72);
+  color: #dce9f8;
+  cursor: pointer;
+}
+
+.filterChipActive {
+  border-color: #3e79ad;
+  background: linear-gradient(180deg, #2f74ae, #225a8b);
+  color: #edf5ff;
+}
+
+.anchorSection {
+  scroll-margin-top: 24px;
+}
+
 .hero {
   display: flex;
   align-items: flex-start;
@@ -537,6 +615,29 @@
 }
 
 @media (max-width: 960px) {
+  .appShell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .sidebarTitle {
+    margin: 0;
+    padding-right: 6px;
+  }
+
+  .sideLink {
+    display: inline-flex;
+    white-space: nowrap;
+  }
+
   .hero {
     flex-direction: column;
     align-items: stretch;
