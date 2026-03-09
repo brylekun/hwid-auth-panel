@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { formatDateTime, maskValue, normalize } from './format';
+import { formatDateTime, formatLicenseDuration, maskValue, normalize } from './format';
 import styles from './dashboard.module.css';
 import type { LicenseRow } from './types';
 
@@ -258,7 +258,7 @@ export default function LicensesTable({
                 <td>{maskValue(license.license_key, showSensitive)}</td>
                 <td><span className={badgeClass(license.status)}>{license.status}</span></td>
                 <td>{license.max_devices}</td>
-                <td>{formatDateTime(license.expires_at)}</td>
+                <td>{formatLicenseDuration(license.expires_at, license.created_at)}</td>
                 <td>{formatDateTime(license.created_at)}</td>
                 <td>
                   <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
@@ -307,7 +307,7 @@ export default function LicensesTable({
             </div>
             <div className={styles.mobileRow}>
               <span className={styles.mobileLabel}>Expires</span>
-              <span>{formatDateTime(license.expires_at)}</span>
+              <span>{formatLicenseDuration(license.expires_at, license.created_at)}</span>
             </div>
             <div className={styles.actionGroup}>
               <button
@@ -400,7 +400,7 @@ export default function LicensesTable({
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>License Key</p><p className={styles.drawerValue}>{selectedDetails.license_key}</p></div>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>Status</p><p className={styles.drawerValue}>{selectedDetails.status}</p></div>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>Max Devices</p><p className={styles.drawerValue}>{selectedDetails.max_devices}</p></div>
-              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Expires At</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.expires_at)}</p></div>
+              <div className={styles.drawerItem}><p className={styles.drawerLabel}>Expires At</p><p className={styles.drawerValue}>{formatLicenseDuration(selectedDetails.expires_at, selectedDetails.created_at)}</p></div>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>Created At</p><p className={styles.drawerValue}>{formatDateTime(selectedDetails.created_at)}</p></div>
               <div className={styles.drawerItem}><p className={styles.drawerLabel}>ID</p><p className={styles.drawerValue}>{selectedDetails.id}</p></div>
             </div>

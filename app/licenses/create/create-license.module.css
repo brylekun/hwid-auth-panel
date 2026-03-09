@@ -146,6 +146,35 @@
   gap: 8px;
 }
 
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.presetBtn {
+  border: 1px solid #3f5f7e;
+  background: rgba(16, 33, 52, 0.52);
+  color: #cde3f7;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 130ms ease, transform 130ms ease, background-color 130ms ease;
+}
+
+.presetBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #5c8098;
+  background: rgba(20, 40, 61, 0.72);
+}
+
+.presetBtnActive {
+  border-color: #45a093;
+  background: linear-gradient(180deg, #2d9488, #237670);
+  color: #effcff;
+}
+
 .ghostBtn {
   border: 1px solid #3c5b72;
   background: #142536;

@@ -34,6 +34,15 @@ type Props = {
   initialAdminAuditLogs: AdminAuditLogRow[];
 };
 
+const sectionLinks = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'trends', label: 'Performance Pulse' },
+  { id: 'licenses', label: 'Licenses' },
+  { id: 'devices', label: 'Devices' },
+  { id: 'auth-logs', label: 'Recent Auth Logs' },
+  { id: 'admin-logs', label: 'Admin Audit Logs' },
+] as const;
+
 export default function DashboardShell({
   initialLicenses,
   initialDevices,
@@ -143,9 +152,22 @@ export default function DashboardShell({
     };
   }, [quickFilter, licenses, devices, logs, adminAuditLogs, referenceTime]);
 
+  const activeSectionMeta = useMemo(() => {
+    const index = sectionLinks.findIndex((item) => item.id === activeSection);
+    const safeIndex = index === -1 ? 0 : index;
+    const progressPercent = ((safeIndex + 1) / sectionLinks.length) * 100;
+
+    return {
+      label: sectionLinks[safeIndex].label,
+      current: safeIndex + 1,
+      total: sectionLinks.length,
+      progressPercent,
+    };
+  }, [activeSection]);
+
   useEffect(() => {
-    const sectionIds = ['overview', 'trends', 'licenses', 'devices', 'auth-logs', 'admin-logs'];
-    const elements = sectionIds
+    const elements = sectionLinks
+      .map((item) => item.id)
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => Boolean(el));
 
@@ -174,17 +196,30 @@ export default function DashboardShell({
     return () => observer.disconnect();
   }, []);
 
+  function jumpToSection(sectionId: string) {
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSection(sectionId);
+  }
+
   return (
     <main className={styles.page}>
       <div className={styles.appShell}>
         <aside className={styles.sidebar}>
           <p className={styles.sidebarTitle}>Navigation</p>
-          <a href="#overview" className={`${styles.sideLink} ${activeSection === 'overview' ? styles.sideLinkActive : ''}`}>Overview</a>
-          <a href="#trends" className={`${styles.sideLink} ${activeSection === 'trends' ? styles.sideLinkActive : ''}`}>Performance Pulse</a>
-          <a href="#licenses" className={`${styles.sideLink} ${activeSection === 'licenses' ? styles.sideLinkActive : ''}`}>Licenses</a>
-          <a href="#devices" className={`${styles.sideLink} ${activeSection === 'devices' ? styles.sideLinkActive : ''}`}>Devices</a>
-          <a href="#auth-logs" className={`${styles.sideLink} ${activeSection === 'auth-logs' ? styles.sideLinkActive : ''}`}>Recent Auth Logs</a>
-          <a href="#admin-logs" className={`${styles.sideLink} ${activeSection === 'admin-logs' ? styles.sideLinkActive : ''}`}>Admin Audit Logs</a>
+          {sectionLinks.map((link) => (
+            <a
+              key={link.id}
+              href={`#${link.id}`}
+              className={`${styles.sideLink} ${activeSection === link.id ? styles.sideLinkActive : ''}`}
+            >
+              {link.label}
+            </a>
+          ))}
         </aside>
 
         <div className={styles.mainColumn}>
@@ -214,6 +249,38 @@ export default function DashboardShell({
             <button className={`${styles.filterChip} ${quickFilter === 'rate_limited' ? styles.filterChipActive : ''}`} onClick={() => setQuickFilter('rate_limited')}>Rate-limited</button>
             <button className={`${styles.filterChip} ${quickFilter === 'today' ? styles.filterChipActive : ''}`} onClick={() => setQuickFilter('today')}>Today</button>
             <button className={`${styles.filterChip} ${quickFilter === 'last_24h' ? styles.filterChipActive : ''}`} onClick={() => setQuickFilter('last_24h')}>Last 24h</button>
+          </section>
+
+          <section className={styles.mobileNav}>
+            <label htmlFor="mobile-section-nav" className={styles.mobileNavLabel}>
+              Jump to section
+            </label>
+            <select
+              id="mobile-section-nav"
+              className={styles.mobileNavSelect}
+              value={activeSection}
+              onChange={(event) => jumpToSection(event.target.value)}
+            >
+              {sectionLinks.map((link) => (
+                <option key={link.id} value={link.id}>
+                  {link.label}
+                </option>
+              ))}
+            </select>
+            <div className={styles.mobileIndicator}>
+              <div className={styles.mobileIndicatorHead}>
+                <span className={styles.mobileIndicatorText}>Now viewing: {activeSectionMeta.label}</span>
+                <span className={styles.mobileIndicatorCount}>
+                  {activeSectionMeta.current}/{activeSectionMeta.total}
+                </span>
+              </div>
+              <div className={styles.mobileIndicatorTrack}>
+                <div
+                  className={styles.mobileIndicatorFill}
+                  style={{ width: `${activeSectionMeta.progressPercent}%` }}
+                />
+              </div>
+            </div>
           </section>
 
           <div id="overview" className={styles.anchorSection}>

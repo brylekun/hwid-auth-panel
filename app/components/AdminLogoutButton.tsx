@@ -7,9 +7,16 @@ export default function AdminLogoutButton() {
   const router = useRouter();
 
   async function handleLogout() {
-    await fetch('/api/admin/logout', { method: 'POST' });
-    router.replace('/login');
-    router.refresh();
+    try {
+      await fetch('/api/admin/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+    } finally {
+      window.location.href = '/login';
+      router.refresh();
+    }
   }
 
   return (

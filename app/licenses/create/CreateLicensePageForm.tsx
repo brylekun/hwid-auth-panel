@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import AdminLogoutButton from '@/app/components/AdminLogoutButton';
 import styles from './create-license.module.css';
+
+type ExpiryPreset = '1h' | '24h' | '7d' | '30d' | 'never';
 
 function generateLicenseKey() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -12,13 +15,41 @@ function generateLicenseKey() {
   return `${segment()}-${segment()}-${segment()}-${segment()}`;
 }
 
+function toLocalDateTimeInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export default function CreateLicensePageForm() {
+  const router = useRouter();
   const [licenseKey, setLicenseKey] = useState(generateLicenseKey());
   const [maxDevices, setMaxDevices] = useState(1);
   const [expiresAt, setExpiresAt] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState<ExpiryPreset>('never');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error' | ''>('');
+
+  function applyExpiryPreset(preset: ExpiryPreset) {
+    setSelectedPreset(preset);
+    if (preset === 'never') {
+      setExpiresAt('');
+      return;
+    }
+
+    const now = Date.now();
+    const durationMs =
+      preset === '1h' ? 60 * 60 * 1000
+      : preset === '24h' ? 24 * 60 * 60 * 1000
+      : preset === '7d' ? 7 * 24 * 60 * 60 * 1000
+      : 30 * 24 * 60 * 60 * 1000;
+
+    setExpiresAt(toLocalDateTimeInputValue(new Date(now + durationMs)));
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,11 +75,8 @@ export default function CreateLicensePageForm() {
         return;
       }
 
-      setMessage('License created successfully.');
-      setMessageType('success');
-      setLicenseKey(generateLicenseKey());
-      setMaxDevices(1);
-      setExpiresAt('');
+      router.replace('/');
+      router.refresh();
     } catch {
       setMessage('Network error while creating license');
       setMessageType('error');
@@ -120,12 +148,57 @@ export default function CreateLicensePageForm() {
 
             <div className={styles.field}>
               <label htmlFor="expiresAt" className={styles.label}>Expires At (optional)</label>
+              <div className={styles.presetRow}>
+                <button
+                  type="button"
+                  className={`${styles.presetBtn} ${selectedPreset === '1h' ? styles.presetBtnActive : ''}`}
+                  onClick={() => applyExpiryPreset('1h')}
+                  disabled={loading}
+                >
+                  1h
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.presetBtn} ${selectedPreset === '24h' ? styles.presetBtnActive : ''}`}
+                  onClick={() => applyExpiryPreset('24h')}
+                  disabled={loading}
+                >
+                  24h
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.presetBtn} ${selectedPreset === '7d' ? styles.presetBtnActive : ''}`}
+                  onClick={() => applyExpiryPreset('7d')}
+                  disabled={loading}
+                >
+                  7d
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.presetBtn} ${selectedPreset === '30d' ? styles.presetBtnActive : ''}`}
+                  onClick={() => applyExpiryPreset('30d')}
+                  disabled={loading}
+                >
+                  30d
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.presetBtn} ${selectedPreset === 'never' ? styles.presetBtnActive : ''}`}
+                  onClick={() => applyExpiryPreset('never')}
+                  disabled={loading}
+                >
+                  Never
+                </button>
+              </div>
               <input
                 id="expiresAt"
                 type="datetime-local"
                 className={styles.input}
                 value={expiresAt}
-                onChange={(event) => setExpiresAt(event.target.value)}
+                onChange={(event) => {
+                  setExpiresAt(event.target.value);
+                  setSelectedPreset('never');
+                }}
               />
             </div>
 

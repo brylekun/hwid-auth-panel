@@ -84,6 +84,80 @@
   margin-bottom: 16px;
 }
 
+.mobileNav {
+  display: none;
+}
+
+.mobileNavLabel {
+  margin: 0;
+  color: #9dc3e6;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mobileNavSelect {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #3f5f7e;
+  background: #122030;
+  color: #dce9f8;
+}
+
+.mobileNavSelect:focus {
+  outline: none;
+  border-color: #63d6c7;
+  box-shadow: 0 0 0 3px rgba(99, 214, 199, 0.18);
+}
+
+.mobileIndicator {
+  margin-top: 10px;
+  border: 1px solid #3a5872;
+  border-radius: 10px;
+  background: rgba(12, 24, 36, 0.62);
+  padding: 8px 10px;
+}
+
+.mobileIndicatorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.mobileIndicatorText {
+  color: #d6e7f9;
+  font-size: 0.83rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileIndicatorCount {
+  color: #8ecdbf;
+  font-size: 0.77rem;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.mobileIndicatorTrack {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(28, 46, 63, 0.9);
+  overflow: hidden;
+}
+
+.mobileIndicatorFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2d9488, #63d6c7);
+  transition: width 240ms ease;
+}
+
 .filterChip {
   border: 1px solid #3f5f7e;
   border-radius: 999px;
@@ -131,6 +205,7 @@
   border-radius: 50%;
   border: 1px solid rgba(127, 172, 208, 0.2);
   box-shadow: inset 0 0 38px rgba(99, 214, 199, 0.12);
+  pointer-events: none;
 }
 
 .heroTitle {
@@ -741,22 +816,7 @@
   }
 
   .sidebar {
-    position: static;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-
-  .sidebarTitle {
-    margin: 0;
-    padding-right: 6px;
-  }
-
-  .sideLink {
-    display: inline-flex;
-    white-space: nowrap;
+    display: none;
   }
 
   .drawerGrid {
@@ -786,6 +846,15 @@
 
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .mobileNav {
+    display: block;
+    border: 1px solid #34516b;
+    border-radius: 12px;
+    background: rgba(15, 30, 45, 0.65);
+    padding: 10px;
+    margin: 0 0 16px;
   }
 }
 
