@@ -1,5 +1,6 @@
 import { getAuthLogs, getDevices, getLicenses } from '@/lib/dashboardData';
 import CreateLicenseForm from './components/CreateLicenseForm';
+import ResetDeviceButton from './components/ResetDeviceButton';
 
 export default async function HomePage() {
   const [licenses, devices, logs] = await Promise.all([
@@ -71,6 +72,7 @@ export default async function HomePage() {
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>First Seen</th>
                 <th style={thStyle}>Last Seen</th>
+                <th style={thStyle}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -81,6 +83,9 @@ export default async function HomePage() {
                   <td style={tdStyle}>{device.status}</td>
                   <td style={tdStyle}>{device.first_seen_at}</td>
                   <td style={tdStyle}>{device.last_seen_at}</td>
+                  <td style={tdStyle}>
+                    <ResetDeviceButton deviceId={device.id} />
+                  </td>
                 </tr>
               ))}
             </tbody>
