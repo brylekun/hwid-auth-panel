@@ -1,10 +1,21 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { basicAuthChallengeHeaders, isAdminBasicAuthValid } from '@/lib/adminAuth';
+import {
+  basicAuthChallengeHeaders,
+  isAdminAuthConfigured,
+  isAdminBasicAuthValid,
+} from '@/lib/adminAuth';
 import { createLicenseBodySchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {
   try {
+    if (!isAdminAuthConfigured()) {
+      return NextResponse.json(
+        { success: false, message: 'Admin auth not configured' },
+        { status: 503 }
+      );
+    }
+
     if (!isAdminBasicAuthValid(req.headers)) {
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
