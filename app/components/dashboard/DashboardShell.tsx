@@ -110,7 +110,7 @@ export default function DashboardShell({
       />
 
       <AuthLogsTable logs={logs} />
-      <AdminAuditLogsTable logs={adminAuditLogs} showSensitive={false} />
+      <AdminAuditLogsTable logs={adminAuditLogs} />
 
       <div className={styles.toastWrap}>
         {toasts.map((toast) => (
