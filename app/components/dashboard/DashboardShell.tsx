@@ -7,7 +7,8 @@ import {
   KeyRound,
   Cpu,
   PlusCircle,
-  ShieldCheck
+  ShieldCheck,
+  Link2,
 } from 'lucide-react';
 import AdminLogoutButton from '../AdminLogoutButton';
 import AdminAuditLogsTable from './AdminAuditLogsTable';
@@ -17,9 +18,16 @@ import DevicesTable from './DevicesTable';
 import LicensesTable from './LicensesTable';
 import OverviewCards from './OverviewCards';
 import TrendWidgets from './TrendWidgets';
+import WebLoadersTable from './WebLoadersTable';
 import styles from './dashboard.module.css';
 import { getTodayManilaDayKey, toManilaDayKey } from './format';
-import type { AdminAuditLogRow, AuthLogRow, DeviceRow, LicenseRow } from './types';
+import type {
+  AdminAuditLogRow,
+  AuthLogRow,
+  DeviceRow,
+  LicenseRow,
+  WebLoaderRow,
+} from './types';
 
 type Toast = {
   id: number;
@@ -41,7 +49,8 @@ type Props = {
   initialDevices: DeviceRow[];
   initialLogs: AuthLogRow[];
   initialAdminAuditLogs: AdminAuditLogRow[];
-  view?: 'home' | 'licenses' | 'devices' | 'create-license';
+  initialWebLoaders?: WebLoaderRow[];
+  view?: 'home' | 'licenses' | 'devices' | 'create-license' | 'web-loaders';
 };
 
 const navLinks = [
@@ -49,6 +58,7 @@ const navLinks = [
   { href: '/licenses', label: 'Licenses', view: 'licenses', icon: KeyRound },
   { href: '/devices', label: 'Devices', view: 'devices', icon: Cpu },
   { href: '/licenses/create', label: 'Create License', view: 'create-license', icon: PlusCircle },
+  { href: '/web-loaders', label: 'Web Loaders', view: 'web-loaders', icon: Link2 },
 ] as const;
 
 const quickFilterOptions: Array<{ value: QuickFilter; label: string }> = [
@@ -66,12 +76,14 @@ export default function DashboardShell({
   initialDevices,
   initialLogs,
   initialAdminAuditLogs,
+  initialWebLoaders = [],
   view = 'home',
 }: Props) {
   const [licenses, setLicenses] = useState(initialLicenses);
   const [devices, setDevices] = useState(initialDevices);
   const [logs] = useState(initialLogs);
   const [adminAuditLogs] = useState(initialAdminAuditLogs);
+  const [webLoaders, setWebLoaders] = useState(initialWebLoaders);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [referenceTime] = useState(() => Date.now());
@@ -113,6 +125,20 @@ export default function DashboardShell({
     );
   }
 
+  function handleWebLoaderCreated(created: WebLoaderRow) {
+    setWebLoaders((prev) => [created, ...prev]);
+  }
+
+  function handleWebLoaderUpdated(updated: WebLoaderRow) {
+    setWebLoaders((prev) =>
+      prev.map((item) => (item.id === updated.id ? updated : item))
+    );
+  }
+
+  function handleWebLoaderDeleted(loaderId: string) {
+    setWebLoaders((prev) => prev.filter((item) => item.id !== loaderId));
+  }
+
   const totals = useMemo(() => {
     return {
       licenses: licenses.length,
@@ -131,7 +157,7 @@ export default function DashboardShell({
     const inToday = (value: string) => toManilaDayKey(value) === manilaTodayKey;
 
     if (quickFilter === 'all') {
-      return { licenses, devices, logs, adminAuditLogs };
+      return { licenses, devices, logs, adminAuditLogs, webLoaders };
     }
 
     if (quickFilter === 'active') {
@@ -140,6 +166,7 @@ export default function DashboardShell({
         devices: devices.filter((item) => item.status === 'active'),
         logs,
         adminAuditLogs,
+        webLoaders: webLoaders.filter((item) => item.status === 'active'),
       };
     }
 
@@ -149,6 +176,7 @@ export default function DashboardShell({
         devices: devices.filter((item) => item.status !== 'active'),
         logs,
         adminAuditLogs,
+        webLoaders: webLoaders.filter((item) => item.status !== 'active'),
       };
     }
 
@@ -158,6 +186,7 @@ export default function DashboardShell({
         devices,
         logs: logs.filter((item) => item.result === 'denied'),
         adminAuditLogs,
+        webLoaders,
       };
     }
 
@@ -167,6 +196,7 @@ export default function DashboardShell({
         devices,
         logs: logs.filter((item) => item.reason?.startsWith('rate_limited')),
         adminAuditLogs,
+        webLoaders,
       };
     }
 
@@ -178,8 +208,8 @@ export default function DashboardShell({
         ),
         logs: logs.filter((item) => inToday(item.created_at)),
         adminAuditLogs: adminAuditLogs.filter((item) =>
-          inToday(item.created_at)
-        ),
+          inToday(item.created_at)),
+        webLoaders: webLoaders.filter((item) => inToday(item.created_at)),
       };
     }
 
@@ -192,8 +222,9 @@ export default function DashboardShell({
       adminAuditLogs: adminAuditLogs.filter((item) =>
         inLast24h(item.created_at)
       ),
+      webLoaders: webLoaders.filter((item) => inLast24h(item.created_at)),
     };
-  }, [quickFilter, licenses, devices, logs, adminAuditLogs, referenceTime]);
+  }, [quickFilter, licenses, devices, logs, adminAuditLogs, webLoaders, referenceTime]);
 
   const pageTitle =
     view === 'licenses'
@@ -202,6 +233,8 @@ export default function DashboardShell({
       ? 'Devices'
       : view === 'create-license'
       ? 'Create License'
+      : view === 'web-loaders'
+      ? 'Web Loaders'
       : 'ThunderTool HWID Panel';
 
   const pageSubtitle =
@@ -211,6 +244,8 @@ export default function DashboardShell({
       ? 'Monitor and manage bound devices and their hardware identifiers.'
       : view === 'create-license'
       ? 'Generate and configure new license keys with expiration controls.'
+      : view === 'web-loaders'
+      ? 'Manage hosted loader links gated by HWID license authorization.'
       : 'Manage licenses, device bindings, and validation activity.';
 
 return (
@@ -364,6 +399,18 @@ return (
             {view === 'create-license' && (
               <div className={styles.sectionPanel}>
                 <CreateLicensePageForm embedded />
+              </div>
+            )}
+
+            {view === 'web-loaders' && (
+              <div className={styles.sectionPanel}>
+                <WebLoadersTable
+                  webLoaders={filteredData.webLoaders}
+                  onWebLoaderCreated={handleWebLoaderCreated}
+                  onWebLoaderUpdated={handleWebLoaderUpdated}
+                  onWebLoaderDeleted={handleWebLoaderDeleted}
+                  pushToast={pushToast}
+                />
               </div>
             )}
 

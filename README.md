@@ -22,6 +22,7 @@ AUTH_RATE_LIMIT_MAX_PER_LICENSE=20
 -- file: supabase/migrations/20260309_admin_audit_logs.sql
 -- file: supabase/migrations/20260309_auth_logs_rate_limit.sql
 -- file: supabase/migrations/20260309_devices_status_active.sql
+-- file: supabase/migrations/20260310_web_loaders.sql
 ```
 
 3. Run the development server:
@@ -42,4 +43,6 @@ Open [http://localhost:3000](http://localhost:3000) and sign in on `/login`. Adm
 
 Set the same environment variables in Vercel project settings before deploying.
 
-The auth validation route (`/api/auth/validate`) remains public for your desktop/client app.
+Public client routes:
+- `/api/auth/validate` (license + HWID validation)
+- `/api/auth/web-loader/[slug]` (license + HWID validation and returns loader download URL)

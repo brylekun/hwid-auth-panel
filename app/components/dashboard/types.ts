@@ -36,3 +36,13 @@ export type AdminAuditLogRow = {
   metadata: Record<string, unknown>;
   created_at: string;
 };
+
+export type WebLoaderRow = {
+  id: string;
+  name: string;
+  slug: string;
+  download_url: string;
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
+};
