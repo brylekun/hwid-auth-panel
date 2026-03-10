@@ -223,7 +223,11 @@ export default function WebLoadersTable({
         setDraftExpectedSha256(data.expectedSha256 || '');
       }
 
-      pushToast('DLL uploaded. URL and SHA-256 filled.');
+      pushToast(
+        data.previewDownloadUrl
+          ? 'DLL uploaded. Session-signed URL is active.'
+          : 'DLL uploaded. URL and SHA-256 filled.'
+      );
     } catch {
       pushToast('Network error while uploading DLL', 'error');
     } finally {
@@ -602,13 +606,17 @@ export default function WebLoadersTable({
             </div>
 
             <div className={styles.licenseCardMeta}>
-            <div className={styles.licenseCardMetaItem}>
-              <p className={styles.mobileLabel}>Download URL:</p>
-              <p className={styles.expiryInlineValue}>{loader.download_url}</p>
-            </div>
-            <div className={styles.licenseCardMetaItem}>
-              <p className={styles.mobileLabel}>Expected SHA-256:</p>
-              <p className={styles.expiryInlineValue}>{loader.expected_sha256 || 'Not set'}</p>
+              <div className={styles.licenseCardMetaItem}>
+                <p className={styles.mobileLabel}>Download URL:</p>
+                <p className={styles.expiryInlineValue}>
+                  {loader.storage_bucket && loader.storage_path
+                    ? `Generated per auth request via ${getEndpoint(loader.slug)}`
+                    : loader.download_url}
+                </p>
+              </div>
+              <div className={styles.licenseCardMetaItem}>
+                <p className={styles.mobileLabel}>Expected SHA-256:</p>
+                <p className={styles.expiryInlineValue}>{loader.expected_sha256 || 'Not set'}</p>
             </div>
           </div>
 
@@ -813,7 +821,11 @@ export default function WebLoadersTable({
               </div>
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>Download URL</p>
-                <p className={styles.drawerValue}>{selectedDetails.download_url}</p>
+                <p className={styles.drawerValue}>
+                  {selectedDetails.storage_bucket && selectedDetails.storage_path
+                    ? `Generated per auth request via ${getEndpoint(selectedDetails.slug)}`
+                    : selectedDetails.download_url}
+                </p>
               </div>
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>Storage Object</p>
@@ -823,6 +835,12 @@ export default function WebLoadersTable({
                     : 'External URL mode'}
                 </p>
               </div>
+              {selectedDetails.storage_bucket && selectedDetails.storage_path ? (
+                <div className={styles.drawerItem}>
+                  <p className={styles.drawerLabel}>Stored Fallback URL</p>
+                  <p className={styles.drawerValue}>{selectedDetails.download_url}</p>
+                </div>
+              ) : null}
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>Expected SHA-256</p>
                 <p className={styles.drawerValue}>{selectedDetails.expected_sha256 || 'Not set'}</p>

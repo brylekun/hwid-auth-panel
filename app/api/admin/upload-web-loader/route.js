@@ -187,28 +187,27 @@ export async function POST(req) {
       );
     }
 
-    let downloadUrl = '';
+    const { data: canonicalUrlData } = supabaseAdmin.storage.from(bucketName).getPublicUrl(storagePath);
+    const downloadUrl = canonicalUrlData?.publicUrl || '';
+    let previewDownloadUrl = '';
     const previewTtlSeconds = parsePreviewSignedUrlTtlSeconds();
     const { data: signedData, error: signedError } = await supabaseAdmin.storage
       .from(bucketName)
       .createSignedUrl(storagePath, previewTtlSeconds);
     if (signedError) {
-      if (shouldBePublic) {
-        const { data: urlData } = supabaseAdmin.storage.from(bucketName).getPublicUrl(storagePath);
-        downloadUrl = urlData?.publicUrl || '';
-      } else {
+      if (!shouldBePublic) {
         return NextResponse.json(
           { success: false, message: signedError.message },
           { status: 400 }
         );
       }
     } else {
-      downloadUrl = signedData?.signedUrl || '';
+      previewDownloadUrl = signedData?.signedUrl || '';
     }
 
     if (!downloadUrl) {
       return NextResponse.json(
-        { success: false, message: 'Failed to generate download URL' },
+        { success: false, message: 'Failed to generate canonical download URL' },
         { status: 500 }
       );
     }
@@ -226,6 +225,7 @@ export async function POST(req) {
         loaderSlug: normalizedSlug,
         previewTtlSeconds,
         downloadUrl,
+        previewDownloadUrl,
         expectedSha256,
       },
     });
@@ -234,6 +234,7 @@ export async function POST(req) {
       success: true,
       message: 'DLL uploaded',
       downloadUrl,
+      previewDownloadUrl,
       storageBucket: bucketName,
       storagePath,
       signedUrlTtlSeconds: parseSignedUrlTtlSeconds(),

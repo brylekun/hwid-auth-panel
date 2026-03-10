@@ -29,6 +29,7 @@ async function resolveDownloadUrl(loader) {
       downloadUrl: loader.download_url,
       isSignedUrl: false,
       signedUrlExpiresInSeconds: null,
+      error: null,
     };
   }
 
@@ -41,9 +42,10 @@ async function resolveDownloadUrl(loader) {
   if (signedError || !signedData?.signedUrl) {
     console.error('Failed to create signed web loader URL:', signedError);
     return {
-      downloadUrl: loader.download_url,
+      downloadUrl: '',
       isSignedUrl: false,
       signedUrlExpiresInSeconds: null,
+      error: signedError?.message || 'Failed to create signed URL',
     };
   }
 
@@ -51,6 +53,7 @@ async function resolveDownloadUrl(loader) {
     downloadUrl: signedData.signedUrl,
     isSignedUrl: true,
     signedUrlExpiresInSeconds: signedTtlSeconds,
+    error: null,
   };
 }
 
@@ -128,6 +131,12 @@ export async function POST(req, context) {
     }
 
     const resolvedDownload = await resolveDownloadUrl(loader);
+    if (resolvedDownload.error) {
+      return NextResponse.json(
+        buildAuthResponse(false, 'Unable to issue fresh download URL'),
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json(
       {

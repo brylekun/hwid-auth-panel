@@ -68,3 +68,4 @@ Notes for DLL uploads:
 - `/api/auth/web-loader/[slug]` now generates a fresh short-lived signed URL on every successful auth request.
 - `/api/auth/web-loader/[slug]` response includes `loader.expectedSha256` for client-side DLL integrity verification.
 - Signed URL TTL is controlled by `WEB_LOADER_AUTH_SIGNED_URL_TTL_SECONDS` (or per-loader `signed_url_ttl_seconds`).
+- The dashboard `Download URL` field for storage-backed loaders is a stored fallback URL; actual delivery URL is generated fresh by `/api/auth/web-loader/[slug]`.
