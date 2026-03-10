@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   CalendarClock,
   Copy,
@@ -45,6 +45,7 @@ export default function WebLoadersTable({
   const [createName, setCreateName] = useState('');
   const [createSlug, setCreateSlug] = useState('');
   const [createDownloadUrl, setCreateDownloadUrl] = useState('');
+  const [isCreateUploadBusy, setIsCreateUploadBusy] = useState(false);
   const [busyId, setBusyId] = useState('');
   const [actionType, setActionType] = useState<'edit' | 'status' | 'delete' | null>(null);
   const [selected, setSelected] = useState<WebLoaderRow | null>(null);
@@ -52,6 +53,9 @@ export default function WebLoadersTable({
   const [draftName, setDraftName] = useState('');
   const [draftSlug, setDraftSlug] = useState('');
   const [draftDownloadUrl, setDraftDownloadUrl] = useState('');
+  const [isEditUploadBusy, setIsEditUploadBusy] = useState(false);
+  const createFileInputRef = useRef<HTMLInputElement | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const filtered = useMemo(() => {
     const q = normalize(query);
@@ -138,6 +142,62 @@ export default function WebLoadersTable({
       pushToast('Network error while creating web loader', 'error');
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function uploadDllFile(file: File, mode: 'create' | 'edit') {
+    if (!file.name.toLowerCase().endsWith('.dll')) {
+      pushToast('Only .dll files are allowed', 'error');
+      return;
+    }
+
+    const slugValue = mode === 'create' ? normalizeSlugInput(createSlug) : normalizeSlugInput(draftSlug);
+
+    if (mode === 'create') {
+      setIsCreateUploadBusy(true);
+    } else {
+      setIsEditUploadBusy(true);
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (slugValue) {
+        formData.append('loaderSlug', slugValue);
+      }
+
+      const response = await fetch('/api/admin/upload-web-loader', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        pushToast(data.message || 'Failed to upload DLL', 'error');
+        return;
+      }
+
+      if (mode === 'create') {
+        setCreateDownloadUrl(data.downloadUrl || '');
+      } else {
+        setDraftDownloadUrl(data.downloadUrl || '');
+      }
+
+      pushToast('DLL uploaded. Download URL filled.');
+    } catch {
+      pushToast('Network error while uploading DLL', 'error');
+    } finally {
+      if (mode === 'create') {
+        setIsCreateUploadBusy(false);
+        if (createFileInputRef.current) {
+          createFileInputRef.current.value = '';
+        }
+      } else {
+        setIsEditUploadBusy(false);
+        if (editFileInputRef.current) {
+          editFileInputRef.current.value = '';
+        }
+      }
     }
   }
 
@@ -294,6 +354,25 @@ export default function WebLoadersTable({
           value={createDownloadUrl}
           onChange={(event) => setCreateDownloadUrl(event.target.value)}
           placeholder="https://example.com/loader.exe"
+        />
+        <button
+          className={styles.btnGhost}
+          type="button"
+          onClick={() => createFileInputRef.current?.click()}
+          disabled={isCreateUploadBusy || isCreating}
+        >
+          {isCreateUploadBusy ? 'Uploading DLL...' : 'Upload DLL'}
+        </button>
+        <input
+          ref={createFileInputRef}
+          className={styles.hiddenFileInput}
+          type="file"
+          accept=".dll,application/octet-stream"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            void uploadDllFile(file, 'create');
+          }}
         />
         <button className={styles.btn} type="submit" disabled={isCreating}>
           {isCreating ? 'Creating...' : 'Create'}
@@ -531,6 +610,25 @@ export default function WebLoadersTable({
                   value={draftDownloadUrl}
                   onChange={(event) => setDraftDownloadUrl(event.target.value)}
                   placeholder="https://example.com/loader.exe"
+                />
+                <button
+                  className={styles.btnGhost}
+                  type="button"
+                  onClick={() => editFileInputRef.current?.click()}
+                  disabled={isEditUploadBusy || Boolean(busyId)}
+                >
+                  {isEditUploadBusy ? 'Uploading DLL...' : 'Upload DLL'}
+                </button>
+                <input
+                  ref={editFileInputRef}
+                  className={styles.hiddenFileInput}
+                  type="file"
+                  accept=".dll,application/octet-stream"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    void uploadDllFile(file, 'edit');
+                  }}
                 />
               </div>
             ) : (

@@ -1276,8 +1276,12 @@
 
 .formGrid {
   display: grid;
-  grid-template-columns: 1.2fr 0.45fr 0.9fr auto;
+  grid-template-columns: 1.2fr 0.45fr 0.9fr auto auto;
   gap: 8px;
+}
+
+.hiddenFileInput {
+  display: none;
 }
 
 .toolbar {

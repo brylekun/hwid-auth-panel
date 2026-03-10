@@ -13,6 +13,11 @@ ADMIN_SESSION_SECRET=optional-extra-secret
 AUTH_RATE_LIMIT_WINDOW_SECONDS=60
 AUTH_RATE_LIMIT_MAX_PER_IP=60
 AUTH_RATE_LIMIT_MAX_PER_LICENSE=20
+WEB_LOADER_STORAGE_BUCKET=web-loader-files
+WEB_LOADER_STORAGE_PREFIX=web-loaders
+WEB_LOADER_STORAGE_PUBLIC=true
+WEB_LOADER_SIGNED_URL_TTL_SECONDS=2592000
+WEB_LOADER_MAX_UPLOAD_MB=4
 ```
 
 2. Apply DB hardening migration in Supabase SQL editor:
@@ -46,3 +51,12 @@ Set the same environment variables in Vercel project settings before deploying.
 Public client routes:
 - `/api/auth/validate` (license + HWID validation)
 - `/api/auth/web-loader/[slug]` (license + HWID validation and returns loader download URL)
+
+Admin routes:
+- `/api/admin/upload-web-loader` (session-protected DLL upload to Supabase Storage, returns `downloadUrl`)
+
+Notes for DLL uploads:
+- This route accepts `.dll` files only.
+- Default max upload size is `4 MB` (`WEB_LOADER_MAX_UPLOAD_MB`) to stay within common serverless request limits.
+- Uploaded files are stored in `WEB_LOADER_STORAGE_BUCKET` and URL-filled directly in the web loader form.
+- If `WEB_LOADER_STORAGE_PUBLIC=false`, route returns a signed download URL using `WEB_LOADER_SIGNED_URL_TTL_SECONDS`.
