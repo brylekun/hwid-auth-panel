@@ -35,7 +35,16 @@ export async function POST(req) {
       );
     }
 
-    const { name, loaderSlug, downloadUrl, status } = parsed.data;
+    const {
+      name,
+      loaderSlug,
+      downloadUrl,
+      storageBucket,
+      storagePath,
+      signedUrlTtlSeconds,
+      expectedSha256,
+      status,
+    } = parsed.data;
     const normalizedSlug = normalizeLoaderSlug(loaderSlug);
     if (!normalizedSlug) {
       return NextResponse.json(
@@ -52,6 +61,10 @@ export async function POST(req) {
         name,
         slug: normalizedSlug,
         download_url: downloadUrl,
+        storage_bucket: storageBucket || null,
+        storage_path: storagePath || null,
+        signed_url_ttl_seconds: signedUrlTtlSeconds || 300,
+        expected_sha256: expectedSha256 || null,
         status: status || 'active',
       })
       .select('*')
@@ -74,6 +87,10 @@ export async function POST(req) {
         name: data.name,
         status: data.status,
         downloadUrl: data.download_url,
+        storageBucket: data.storage_bucket,
+        storagePath: data.storage_path,
+        signedUrlTtlSeconds: data.signed_url_ttl_seconds,
+        expectedSha256: data.expected_sha256,
       },
     });
 

@@ -5,6 +5,8 @@ import { validateBodySchema } from '@/lib/validation';
 import { normalizeLoaderSlug } from '@/lib/webLoaderSlug';
 import { NextResponse } from 'next/server';
 
+const DEFAULT_SIGNED_URL_TTL_SECONDS = 300;
+
 async function getRouteSlug(context) {
   const maybeParams = context?.params;
   if (!maybeParams) {
@@ -13,6 +15,43 @@ async function getRouteSlug(context) {
 
   const params = typeof maybeParams?.then === 'function' ? await maybeParams : maybeParams;
   return typeof params?.slug === 'string' ? params.slug : null;
+}
+
+function resolveSignedTtlSeconds(loaderTtlSeconds) {
+  const envTtl = Number(process.env.WEB_LOADER_AUTH_SIGNED_URL_TTL_SECONDS ?? DEFAULT_SIGNED_URL_TTL_SECONDS);
+  const raw = Number.isFinite(loaderTtlSeconds) && loaderTtlSeconds > 0 ? loaderTtlSeconds : envTtl;
+  return Math.min(3600, Math.max(60, Math.floor(raw)));
+}
+
+async function resolveDownloadUrl(loader) {
+  if (!loader.storage_bucket || !loader.storage_path) {
+    return {
+      downloadUrl: loader.download_url,
+      isSignedUrl: false,
+      signedUrlExpiresInSeconds: null,
+    };
+  }
+
+  const signedTtlSeconds = resolveSignedTtlSeconds(loader.signed_url_ttl_seconds);
+
+  const { data: signedData, error: signedError } = await supabaseAdmin.storage
+    .from(loader.storage_bucket)
+    .createSignedUrl(loader.storage_path, signedTtlSeconds);
+
+  if (signedError || !signedData?.signedUrl) {
+    console.error('Failed to create signed web loader URL:', signedError);
+    return {
+      downloadUrl: loader.download_url,
+      isSignedUrl: false,
+      signedUrlExpiresInSeconds: null,
+    };
+  }
+
+  return {
+    downloadUrl: signedData.signedUrl,
+    isSignedUrl: true,
+    signedUrlExpiresInSeconds: signedTtlSeconds,
+  };
 }
 
 export async function POST(req, context) {
@@ -29,7 +68,7 @@ export async function POST(req, context) {
 
     const { data: loader, error: loaderError } = await supabaseAdmin
       .from('web_loaders')
-      .select('id, name, slug, download_url, status')
+      .select('id, name, slug, download_url, storage_bucket, storage_path, signed_url_ttl_seconds, expected_sha256, status')
       .eq('slug', slug)
       .maybeSingle();
 
@@ -88,6 +127,8 @@ export async function POST(req, context) {
       });
     }
 
+    const resolvedDownload = await resolveDownloadUrl(loader);
+
     return NextResponse.json(
       {
         ...authResult.body,
@@ -96,7 +137,10 @@ export async function POST(req, context) {
           id: loader.id,
           name: loader.name,
           slug: loader.slug,
-          downloadUrl: loader.download_url,
+          downloadUrl: resolvedDownload.downloadUrl,
+          isSignedUrl: resolvedDownload.isSignedUrl,
+          signedUrlExpiresInSeconds: resolvedDownload.signedUrlExpiresInSeconds,
+          expectedSha256: loader.expected_sha256 || null,
         },
       },
       { status: 200 }

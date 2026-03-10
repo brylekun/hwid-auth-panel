@@ -42,6 +42,10 @@ export type WebLoaderRow = {
   name: string;
   slug: string;
   download_url: string;
+  storage_bucket?: string | null;
+  storage_path?: string | null;
+  signed_url_ttl_seconds?: number | null;
+  expected_sha256?: string | null;
   status: 'active' | 'inactive';
   created_at: string;
   updated_at: string;

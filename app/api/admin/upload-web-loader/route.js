@@ -11,7 +11,8 @@ import { NextResponse } from 'next/server';
 const DEFAULT_BUCKET = 'web-loader-files';
 const DEFAULT_PREFIX = 'web-loaders';
 const DEFAULT_MAX_UPLOAD_MB = 4;
-const DEFAULT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 30;
+const DEFAULT_SIGNED_URL_TTL_SECONDS = 300;
+const DEFAULT_PREVIEW_URL_TTL_SECONDS = 600;
 
 function parseMaxUploadBytes() {
   const raw = Number(process.env.WEB_LOADER_MAX_UPLOAD_MB ?? DEFAULT_MAX_UPLOAD_MB);
@@ -29,6 +30,17 @@ function parseSignedUrlTtlSeconds() {
   }
 
   return Math.floor(raw);
+}
+
+function parsePreviewSignedUrlTtlSeconds() {
+  const raw = Number(
+    process.env.WEB_LOADER_UPLOAD_PREVIEW_TTL_SECONDS ?? DEFAULT_PREVIEW_URL_TTL_SECONDS
+  );
+  if (!Number.isFinite(raw) || raw <= 0) {
+    return DEFAULT_PREVIEW_URL_TTL_SECONDS;
+  }
+
+  return Math.min(3600, Math.max(60, Math.floor(raw)));
 }
 
 function normalizePrefix(rawPrefix) {
@@ -50,6 +62,16 @@ function normalizeFileName(fileName) {
 
   const withoutExt = safe.replace(/\.dll$/i, '');
   return `${withoutExt || 'loader'}.dll`;
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+}
+
+async function computeSha256Hex(file) {
+  const fileBuffer = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256', fileBuffer);
+  return bytesToHex(new Uint8Array(digest));
 }
 
 async function ensureBucket(bucketName, shouldBePublic) {
@@ -134,10 +156,12 @@ export async function POST(req) {
       );
     }
 
+    const expectedSha256 = await computeSha256Hex(uploaded);
+
     const adminUsername = await getAdminUsernameFromRequest(req);
     const bucketName = process.env.WEB_LOADER_STORAGE_BUCKET || DEFAULT_BUCKET;
     const prefix = normalizePrefix(process.env.WEB_LOADER_STORAGE_PREFIX);
-    const shouldBePublic = (process.env.WEB_LOADER_STORAGE_PUBLIC || 'true').toLowerCase() !== 'false';
+    const shouldBePublic = (process.env.WEB_LOADER_STORAGE_PUBLIC || 'false').toLowerCase() !== 'false';
 
     await ensureBucket(bucketName, shouldBePublic);
 
@@ -164,21 +188,21 @@ export async function POST(req) {
     }
 
     let downloadUrl = '';
-    if (shouldBePublic) {
-      const { data: urlData } = supabaseAdmin.storage.from(bucketName).getPublicUrl(storagePath);
-      downloadUrl = urlData?.publicUrl || '';
-    } else {
-      const ttlSeconds = parseSignedUrlTtlSeconds();
-      const { data: signedData, error: signedError } = await supabaseAdmin.storage
-        .from(bucketName)
-        .createSignedUrl(storagePath, ttlSeconds);
-      if (signedError) {
+    const previewTtlSeconds = parsePreviewSignedUrlTtlSeconds();
+    const { data: signedData, error: signedError } = await supabaseAdmin.storage
+      .from(bucketName)
+      .createSignedUrl(storagePath, previewTtlSeconds);
+    if (signedError) {
+      if (shouldBePublic) {
+        const { data: urlData } = supabaseAdmin.storage.from(bucketName).getPublicUrl(storagePath);
+        downloadUrl = urlData?.publicUrl || '';
+      } else {
         return NextResponse.json(
           { success: false, message: signedError.message },
           { status: 400 }
         );
       }
-
+    } else {
       downloadUrl = signedData?.signedUrl || '';
     }
 
@@ -200,7 +224,9 @@ export async function POST(req) {
         fileName,
         fileSize: uploaded.size,
         loaderSlug: normalizedSlug,
+        previewTtlSeconds,
         downloadUrl,
+        expectedSha256,
       },
     });
 
@@ -208,6 +234,10 @@ export async function POST(req) {
       success: true,
       message: 'DLL uploaded',
       downloadUrl,
+      storageBucket: bucketName,
+      storagePath,
+      signedUrlTtlSeconds: parseSignedUrlTtlSeconds(),
+      expectedSha256,
       filePath: storagePath,
       bucket: bucketName,
     });

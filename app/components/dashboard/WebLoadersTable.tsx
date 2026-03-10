@@ -45,6 +45,9 @@ export default function WebLoadersTable({
   const [createName, setCreateName] = useState('');
   const [createSlug, setCreateSlug] = useState('');
   const [createDownloadUrl, setCreateDownloadUrl] = useState('');
+  const [createStorageBucket, setCreateStorageBucket] = useState('');
+  const [createStoragePath, setCreateStoragePath] = useState('');
+  const [createExpectedSha256, setCreateExpectedSha256] = useState('');
   const [isCreateUploadBusy, setIsCreateUploadBusy] = useState(false);
   const [busyId, setBusyId] = useState('');
   const [actionType, setActionType] = useState<'edit' | 'status' | 'delete' | null>(null);
@@ -53,6 +56,9 @@ export default function WebLoadersTable({
   const [draftName, setDraftName] = useState('');
   const [draftSlug, setDraftSlug] = useState('');
   const [draftDownloadUrl, setDraftDownloadUrl] = useState('');
+  const [draftStorageBucket, setDraftStorageBucket] = useState('');
+  const [draftStoragePath, setDraftStoragePath] = useState('');
+  const [draftExpectedSha256, setDraftExpectedSha256] = useState('');
   const [isEditUploadBusy, setIsEditUploadBusy] = useState(false);
   const createFileInputRef = useRef<HTMLInputElement | null>(null);
   const editFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -68,7 +74,8 @@ export default function WebLoadersTable({
       return (
         normalize(loader.name).includes(q) ||
         normalize(loader.slug).includes(q) ||
-        normalize(loader.download_url).includes(q)
+        normalize(loader.download_url).includes(q) ||
+        normalize(loader.expected_sha256 || '').includes(q)
       );
     });
   }, [webLoaders, query, statusFilter]);
@@ -108,9 +115,22 @@ export default function WebLoadersTable({
     const name = createName.trim();
     const slug = normalizeSlugInput(createSlug);
     const downloadUrl = createDownloadUrl.trim();
+    const storageBucket = createStorageBucket.trim();
+    const storagePath = createStoragePath.trim();
+    const expectedSha256 = createExpectedSha256.trim().toLowerCase();
 
     if (!name || !slug || !downloadUrl) {
       pushToast('Name, slug, and download URL are required', 'error');
+      return;
+    }
+
+    if ((storageBucket && !storagePath) || (!storageBucket && storagePath)) {
+      pushToast('Storage bucket/path must be set together', 'error');
+      return;
+    }
+
+    if (expectedSha256 && !/^[a-f0-9]{64}$/.test(expectedSha256)) {
+      pushToast('Expected SHA-256 must be 64 lowercase hex chars', 'error');
       return;
     }
 
@@ -123,6 +143,17 @@ export default function WebLoadersTable({
           name,
           loaderSlug: slug,
           downloadUrl,
+          ...(storageBucket && storagePath
+            ? {
+                storageBucket,
+                storagePath,
+              }
+            : {}),
+          ...(expectedSha256
+            ? {
+                expectedSha256,
+              }
+            : {}),
         }),
       });
 
@@ -136,6 +167,9 @@ export default function WebLoadersTable({
       setCreateName('');
       setCreateSlug('');
       setCreateDownloadUrl('');
+      setCreateStorageBucket('');
+      setCreateStoragePath('');
+      setCreateExpectedSha256('');
       setPage(1);
       pushToast('Web loader created');
     } catch {
@@ -179,11 +213,17 @@ export default function WebLoadersTable({
 
       if (mode === 'create') {
         setCreateDownloadUrl(data.downloadUrl || '');
+        setCreateStorageBucket(data.storageBucket || data.bucket || '');
+        setCreateStoragePath(data.storagePath || data.filePath || '');
+        setCreateExpectedSha256(data.expectedSha256 || '');
       } else {
         setDraftDownloadUrl(data.downloadUrl || '');
+        setDraftStorageBucket(data.storageBucket || data.bucket || '');
+        setDraftStoragePath(data.storagePath || data.filePath || '');
+        setDraftExpectedSha256(data.expectedSha256 || '');
       }
 
-      pushToast('DLL uploaded. Download URL filled.');
+      pushToast('DLL uploaded. URL and SHA-256 filled.');
     } catch {
       pushToast('Network error while uploading DLL', 'error');
     } finally {
@@ -207,6 +247,9 @@ export default function WebLoadersTable({
       name?: string;
       loaderSlug?: string;
       downloadUrl?: string;
+      storageBucket?: string | null;
+      storagePath?: string | null;
+      expectedSha256?: string | null;
       status?: 'active' | 'inactive';
     }
   ) {
@@ -265,6 +308,9 @@ export default function WebLoadersTable({
     setDraftName(loader.name);
     setDraftSlug(loader.slug);
     setDraftDownloadUrl(loader.download_url);
+    setDraftStorageBucket(loader.storage_bucket || '');
+    setDraftStoragePath(loader.storage_path || '');
+    setDraftExpectedSha256(loader.expected_sha256 || '');
   }
 
   function closeAction() {
@@ -274,19 +320,45 @@ export default function WebLoadersTable({
     setDraftName('');
     setDraftSlug('');
     setDraftDownloadUrl('');
+    setDraftStorageBucket('');
+    setDraftStoragePath('');
+    setDraftExpectedSha256('');
   }
 
   async function confirmAction() {
     if (!selected || !actionType) return;
 
     if (actionType === 'edit') {
-      const payload = {} as { name?: string; loaderSlug?: string; downloadUrl?: string };
+      const payload = {} as {
+        name?: string;
+        loaderSlug?: string;
+        downloadUrl?: string;
+        storageBucket?: string | null;
+        storagePath?: string | null;
+        expectedSha256?: string | null;
+      };
       const nextName = draftName.trim();
       const nextSlug = normalizeSlugInput(draftSlug);
       const nextUrl = draftDownloadUrl.trim();
+      const nextStorageBucket = draftStorageBucket.trim();
+      const nextStoragePath = draftStoragePath.trim();
+      const prevStorageBucket = (selected.storage_bucket || '').trim();
+      const prevStoragePath = (selected.storage_path || '').trim();
+      const nextExpectedSha256 = draftExpectedSha256.trim().toLowerCase();
+      const prevExpectedSha256 = (selected.expected_sha256 || '').trim().toLowerCase();
 
       if (!nextName || !nextSlug || !nextUrl) {
         pushToast('Name, slug, and download URL are required', 'error');
+        return;
+      }
+
+      if ((nextStorageBucket && !nextStoragePath) || (!nextStorageBucket && nextStoragePath)) {
+        pushToast('Storage bucket/path must be set together', 'error');
+        return;
+      }
+
+      if (nextExpectedSha256 && !/^[a-f0-9]{64}$/.test(nextExpectedSha256)) {
+        pushToast('Expected SHA-256 must be 64 lowercase hex chars', 'error');
         return;
       }
 
@@ -302,7 +374,28 @@ export default function WebLoadersTable({
         payload.downloadUrl = nextUrl;
       }
 
-      if (!payload.name && !payload.loaderSlug && !payload.downloadUrl) {
+      if (nextStorageBucket !== prevStorageBucket || nextStoragePath !== prevStoragePath) {
+        if (nextStorageBucket && nextStoragePath) {
+          payload.storageBucket = nextStorageBucket;
+          payload.storagePath = nextStoragePath;
+        } else {
+          payload.storageBucket = null;
+          payload.storagePath = null;
+        }
+      }
+
+      if (nextExpectedSha256 !== prevExpectedSha256) {
+        payload.expectedSha256 = nextExpectedSha256 || null;
+      }
+
+      if (
+        !payload.name &&
+        !payload.loaderSlug &&
+        !payload.downloadUrl &&
+        payload.storageBucket === undefined &&
+        payload.storagePath === undefined &&
+        payload.expectedSha256 === undefined
+      ) {
         pushToast('No changes to save', 'error');
         return;
       }
@@ -352,8 +445,19 @@ export default function WebLoadersTable({
         <input
           className={styles.input}
           value={createDownloadUrl}
-          onChange={(event) => setCreateDownloadUrl(event.target.value)}
+          onChange={(event) => {
+            setCreateDownloadUrl(event.target.value);
+            setCreateStorageBucket('');
+            setCreateStoragePath('');
+            setCreateExpectedSha256('');
+          }}
           placeholder="https://example.com/loader.exe"
+        />
+        <input
+          className={styles.input}
+          value={createExpectedSha256}
+          onChange={(event) => setCreateExpectedSha256(event.target.value.toLowerCase())}
+          placeholder="Expected SHA-256 (optional)"
         />
         <button
           className={styles.btnGhost}
@@ -498,11 +602,15 @@ export default function WebLoadersTable({
             </div>
 
             <div className={styles.licenseCardMeta}>
-              <div className={styles.licenseCardMetaItem}>
-                <p className={styles.mobileLabel}>Download URL:</p>
-                <p className={styles.expiryInlineValue}>{loader.download_url}</p>
-              </div>
+            <div className={styles.licenseCardMetaItem}>
+              <p className={styles.mobileLabel}>Download URL:</p>
+              <p className={styles.expiryInlineValue}>{loader.download_url}</p>
             </div>
+            <div className={styles.licenseCardMetaItem}>
+              <p className={styles.mobileLabel}>Expected SHA-256:</p>
+              <p className={styles.expiryInlineValue}>{loader.expected_sha256 || 'Not set'}</p>
+            </div>
+          </div>
 
             <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
               <button
@@ -608,8 +716,19 @@ export default function WebLoadersTable({
                 <input
                   className={styles.input}
                   value={draftDownloadUrl}
-                  onChange={(event) => setDraftDownloadUrl(event.target.value)}
+                  onChange={(event) => {
+                    setDraftDownloadUrl(event.target.value);
+                    setDraftStorageBucket('');
+                    setDraftStoragePath('');
+                    setDraftExpectedSha256('');
+                  }}
                   placeholder="https://example.com/loader.exe"
+                />
+                <input
+                  className={styles.input}
+                  value={draftExpectedSha256}
+                  onChange={(event) => setDraftExpectedSha256(event.target.value.toLowerCase())}
+                  placeholder="Expected SHA-256 (optional)"
                 />
                 <button
                   className={styles.btnGhost}
@@ -695,6 +814,18 @@ export default function WebLoadersTable({
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>Download URL</p>
                 <p className={styles.drawerValue}>{selectedDetails.download_url}</p>
+              </div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Storage Object</p>
+                <p className={styles.drawerValue}>
+                  {selectedDetails.storage_bucket && selectedDetails.storage_path
+                    ? `${selectedDetails.storage_bucket}/${selectedDetails.storage_path}`
+                    : 'External URL mode'}
+                </p>
+              </div>
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>Expected SHA-256</p>
+                <p className={styles.drawerValue}>{selectedDetails.expected_sha256 || 'Not set'}</p>
               </div>
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>API Endpoint</p>

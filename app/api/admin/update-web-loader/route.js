@@ -35,12 +35,22 @@ export async function POST(req) {
       );
     }
 
-    const { loaderId, name, loaderSlug, downloadUrl, status } = parsed.data;
+    const {
+      loaderId,
+      name,
+      loaderSlug,
+      downloadUrl,
+      storageBucket,
+      storagePath,
+      signedUrlTtlSeconds,
+      expectedSha256,
+      status,
+    } = parsed.data;
     const adminUsername = await getAdminUsernameFromRequest(req);
 
     const { data: previous, error: previousError } = await supabaseAdmin
       .from('web_loaders')
-      .select('id, name, slug, download_url, status')
+      .select('id, name, slug, download_url, storage_bucket, storage_path, signed_url_ttl_seconds, expected_sha256, status')
       .eq('id', loaderId)
       .maybeSingle();
 
@@ -70,6 +80,22 @@ export async function POST(req) {
 
     if (downloadUrl) {
       payload.download_url = downloadUrl;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(parsed.data, 'storageBucket')) {
+      payload.storage_bucket = storageBucket;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(parsed.data, 'storagePath')) {
+      payload.storage_path = storagePath;
+    }
+
+    if (signedUrlTtlSeconds) {
+      payload.signed_url_ttl_seconds = signedUrlTtlSeconds;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(parsed.data, 'expectedSha256')) {
+      payload.expected_sha256 = expectedSha256;
     }
 
     if (status) {
@@ -108,12 +134,20 @@ export async function POST(req) {
           slug: previous.slug,
           status: previous.status,
           downloadUrl: previous.download_url,
+          storageBucket: previous.storage_bucket,
+          storagePath: previous.storage_path,
+          signedUrlTtlSeconds: previous.signed_url_ttl_seconds,
+          expectedSha256: previous.expected_sha256,
         },
         next: {
           name: data.name,
           slug: data.slug,
           status: data.status,
           downloadUrl: data.download_url,
+          storageBucket: data.storage_bucket,
+          storagePath: data.storage_path,
+          signedUrlTtlSeconds: data.signed_url_ttl_seconds,
+          expectedSha256: data.expected_sha256,
         },
       },
     });
