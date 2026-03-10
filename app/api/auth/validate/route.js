@@ -19,6 +19,55 @@ const reasonResponseMap = {
   rate_limited_license: { status: 429, message: 'Too many attempts for this license' },
 };
 
+const EMPTY_EXPIRY_META = {
+  expiresAt: null,
+  isExpired: null,
+  expiresInSeconds: null,
+};
+
+function buildAuthResponse(success, message, expiryMeta = EMPTY_EXPIRY_META) {
+  return {
+    success,
+    message,
+    expiresAt: expiryMeta?.expiresAt ?? null,
+    isExpired: expiryMeta?.isExpired ?? null,
+    expiresInSeconds: expiryMeta?.expiresInSeconds ?? null,
+  };
+}
+
+function parseExpiryIso(value) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
+function buildExpiryMeta(expiresAtValue, unknownWhenMissing = false) {
+  const expiresAt = parseExpiryIso(expiresAtValue);
+  if (!expiresAt) {
+    return {
+      expiresAt: null,
+      isExpired: unknownWhenMissing ? null : false,
+      expiresInSeconds: null,
+    };
+  }
+
+  const expiresAtMs = new Date(expiresAt).getTime();
+  const nowMs = Date.now();
+
+  return {
+    expiresAt,
+    isExpired: expiresAtMs <= nowMs,
+    expiresInSeconds: Math.max(0, Math.ceil((expiresAtMs - nowMs) / 1000)),
+  };
+}
+
 function getNumberEnv(name, fallback) {
   const value = Number(process.env[name]);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
@@ -91,6 +140,33 @@ async function writeAuthLog(licenseKey, hwidHash, success, reason, clientIp) {
   }
 }
 
+async function getLicenseExpiryMeta(licenseKey) {
+  const { data: license, error } = await supabaseAdmin
+    .from('licenses')
+    .select('expires_at')
+    .eq('license_key', licenseKey)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Failed to load license expiry metadata:', error.message || error);
+    return {
+      expiresAt: null,
+      isExpired: null,
+      expiresInSeconds: null,
+    };
+  }
+
+  if (!license) {
+    return {
+      expiresAt: null,
+      isExpired: null,
+      expiresInSeconds: null,
+    };
+  }
+
+  return buildExpiryMeta(license.expires_at);
+}
+
 async function syncDeviceActiveState(licenseKey, hwidHash, deviceName) {
   const { data: license, error: licenseError } = await supabaseAdmin
     .from('licenses')
@@ -141,9 +217,12 @@ async function bindDeviceWithRpc(licenseKey, hwidHash, deviceName) {
     return { error: new Error('Unexpected RPC response payload') };
   }
 
+  const hasExpiryField = Object.prototype.hasOwnProperty.call(row, 'expires_at');
+
   return {
     success: row.success,
     reason: row.reason || (row.success ? 'known_device' : 'denied'),
+    ...(hasExpiryField ? { expiresAt: parseExpiryIso(row.expires_at) } : {}),
   };
 }
 
@@ -159,15 +238,15 @@ async function legacyBindDevice(licenseKey, hwidHash, deviceName) {
   }
 
   if (!license) {
-    return { success: false, reason: 'license_not_found' };
+    return { success: false, reason: 'license_not_found', expiresAt: null };
   }
 
   if (license.status !== 'active') {
-    return { success: false, reason: 'license_inactive' };
+    return { success: false, reason: 'license_inactive', expiresAt: parseExpiryIso(license.expires_at) };
   }
 
   if (license.expires_at && new Date(license.expires_at) < new Date()) {
-    return { success: false, reason: 'license_expired' };
+    return { success: false, reason: 'license_expired', expiresAt: parseExpiryIso(license.expires_at) };
   }
 
   const { data: knownDevice, error: knownDeviceError } = await supabaseAdmin
@@ -187,7 +266,7 @@ async function legacyBindDevice(licenseKey, hwidHash, deviceName) {
       .update({ last_seen_at: new Date().toISOString() })
       .eq('id', knownDevice.id);
 
-    return { success: true, reason: 'known_device' };
+    return { success: true, reason: 'known_device', expiresAt: parseExpiryIso(license.expires_at) };
   }
 
   const { count, error: countError } = await supabaseAdmin
@@ -200,7 +279,7 @@ async function legacyBindDevice(licenseKey, hwidHash, deviceName) {
   }
 
   if ((count || 0) >= license.max_devices) {
-    return { success: false, reason: 'device_limit_reached' };
+    return { success: false, reason: 'device_limit_reached', expiresAt: parseExpiryIso(license.expires_at) };
   }
 
   const { error: insertError } = await supabaseAdmin.from('devices').insert({
@@ -212,13 +291,13 @@ async function legacyBindDevice(licenseKey, hwidHash, deviceName) {
 
   if (insertError) {
     if (insertError.code === '23505') {
-      return { success: true, reason: 'known_device' };
+      return { success: true, reason: 'known_device', expiresAt: parseExpiryIso(license.expires_at) };
     }
 
     throw insertError;
   }
 
-  return { success: true, reason: 'new_device_bound' };
+  return { success: true, reason: 'new_device_bound', expiresAt: parseExpiryIso(license.expires_at) };
 }
 
 export async function POST(req) {
@@ -228,7 +307,7 @@ export async function POST(req) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, message: parsed.error.issues[0]?.message || 'Invalid request body' },
+        buildAuthResponse(false, parsed.error.issues[0]?.message || 'Invalid request body'),
         { status: 400 }
       );
     }
@@ -237,7 +316,7 @@ export async function POST(req) {
     const normalizedLicenseKey = normalizeLicenseKey(licenseKey);
     if (!normalizedLicenseKey) {
       return NextResponse.json(
-        { success: false, message: 'Invalid license format' },
+        buildAuthResponse(false, 'Invalid license format'),
         { status: 400 }
       );
     }
@@ -247,10 +326,11 @@ export async function POST(req) {
 
     if (rateLimitCheck.limited) {
       await writeAuthLog(normalizedLicenseKey, hwidHash, false, rateLimitCheck.reason, clientIp);
+      const rateLimitExpiryMeta = await getLicenseExpiryMeta(normalizedLicenseKey);
 
       const mappedLimitResponse = reasonResponseMap[rateLimitCheck.reason];
       return NextResponse.json(
-        { success: false, message: mappedLimitResponse.message },
+        buildAuthResponse(false, mappedLimitResponse.message, rateLimitExpiryMeta),
         {
           status: mappedLimitResponse.status,
           headers: {
@@ -272,6 +352,11 @@ export async function POST(req) {
       message: decision.success ? 'Authorized' : 'Access denied',
     };
 
+    const expiryMeta =
+      decision.expiresAt !== undefined
+        ? buildExpiryMeta(decision.expiresAt, decision.reason === 'license_not_found')
+        : await getLicenseExpiryMeta(normalizedLicenseKey);
+
     if (decision.success) {
       await syncDeviceActiveState(normalizedLicenseKey, hwidHash, deviceName);
     } else if (decision.reason === 'license_expired') {
@@ -281,14 +366,14 @@ export async function POST(req) {
     await writeAuthLog(normalizedLicenseKey, hwidHash, decision.success, decision.reason, clientIp);
 
     return NextResponse.json(
-      { success: decision.success, message: mappedResponse.message },
+      buildAuthResponse(decision.success, mappedResponse.message, expiryMeta),
       { status: mappedResponse.status }
     );
   } catch (error) {
     console.error('Validation route error:', error);
 
     return NextResponse.json(
-      { success: false, message: 'Server error' },
+      buildAuthResponse(false, 'Server error'),
       { status: 500 }
     );
   }
