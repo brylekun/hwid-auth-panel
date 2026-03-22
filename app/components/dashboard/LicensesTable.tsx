@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   Pencil,
   Power,
+  RotateCcw,
   Smartphone,
   Trash2,
 } from 'lucide-react';
@@ -67,7 +68,7 @@ export default function LicensesTable({
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState('');
-  const [actionType, setActionType] = useState<'edit' | 'status' | 'delete' | null>(null);
+  const [actionType, setActionType] = useState<'edit' | 'status' | 'delete' | 'reset_session' | null>(null);
   const [selected, setSelected] = useState<LicenseRow | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<LicenseRow | null>(null);
   const [draftKey, setDraftKey] = useState('');
@@ -208,6 +209,31 @@ export default function LicensesTable({
     }
   }
 
+  async function resetLicenseSession(licenseId: string) {
+    setBusyId(licenseId);
+
+    try {
+      const response = await fetch('/api/admin/reset-license-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ licenseId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        pushToast(data.message || 'Failed to reset license session', 'error');
+        return;
+      }
+
+      pushToast(data.message || 'License session reset');
+    } catch {
+      pushToast('Network error while resetting license session', 'error');
+    } finally {
+      setBusyId('');
+    }
+  }
+
   async function copyLicenseKey(value: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -245,7 +271,7 @@ export default function LicensesTable({
     return `${primaryLabel} (+${sortedDevices.length - 1} more)`;
   }
 
-  function openAction(type: 'edit' | 'status' | 'delete', license: LicenseRow) {
+  function openAction(type: 'edit' | 'status' | 'delete' | 'reset_session', license: LicenseRow) {
     setActionType(type);
     setSelected(license);
     setDraftKey(license.license_key);
@@ -336,6 +362,12 @@ export default function LicensesTable({
       await updateLicense(selected.id, {
         status: selected.status === 'active' ? 'inactive' : 'active',
       });
+      closeAction();
+      return;
+    }
+
+    if (actionType === 'reset_session') {
+      await resetLicenseSession(selected.id);
       closeAction();
       return;
     }
@@ -507,7 +539,10 @@ export default function LicensesTable({
                 </div>
               </div>
 
-              <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
+              <div
+                className={`${styles.actionGroup} ${styles.licenseActionGrid}`}
+                onClick={(event) => event.stopPropagation()}
+              >
                 <button
                   className={`${styles.btnGhost} ${styles.licenseActionEdit}`}
                   onClick={() => openAction('edit', license)}
@@ -531,6 +566,18 @@ export default function LicensesTable({
                   <span className={styles.btnInline}>
                     <Power size={15} strokeWidth={2} />
                     {license.status === 'active' ? 'Deactivate' : 'Activate'}
+                  </span>
+                </button>
+
+                <button
+                  className={`${styles.btnGhost} ${styles.licenseActionSessionReset}`}
+                  onClick={() => openAction('reset_session', license)}
+                  disabled={busyId === license.id}
+                  type="button"
+                >
+                  <span className={styles.btnInline}>
+                    <RotateCcw size={15} strokeWidth={2} />
+                    Reset Session
                   </span>
                 </button>
 
@@ -578,6 +625,8 @@ export default function LicensesTable({
                   ? selected.status === 'active'
                     ? 'Deactivate License'
                     : 'Activate License'
+                  : actionType === 'reset_session'
+                    ? 'Reset License Session'
                   : 'Delete License'}
             </h3>
 
@@ -639,6 +688,8 @@ export default function LicensesTable({
               <p className={styles.modalText}>
                 {actionType === 'status'
                   ? `Are you sure you want to ${selected.status === 'active' ? 'deactivate' : 'activate'} this license?`
+                  : actionType === 'reset_session'
+                    ? 'Reset active key session now? This will force a fresh login handshake for this license.'
                   : 'Are you sure you want to delete this license? This cannot be undone.'}
               </p>
             )}
@@ -667,6 +718,8 @@ export default function LicensesTable({
                       ? selected.status === 'active'
                         ? 'Deactivate'
                         : 'Activate'
+                      : actionType === 'reset_session'
+                        ? 'Reset Session'
                       : 'Delete'}
               </button>
             </div>

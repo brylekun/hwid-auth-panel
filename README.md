@@ -70,6 +70,7 @@ Single-session lock:
 
 Admin routes:
 - `/api/admin/upload-web-loader` (session-protected DLL upload to Supabase Storage, returns `downloadUrl`)
+- `/api/admin/reset-license-session` (session-protected active-session reset for a license key)
 
 Notes for DLL uploads:
 - This route accepts `.dll` files only.
