@@ -13,6 +13,9 @@ ADMIN_SESSION_SECRET=optional-extra-secret
 AUTH_RATE_LIMIT_WINDOW_SECONDS=60
 AUTH_RATE_LIMIT_MAX_PER_IP=60
 AUTH_RATE_LIMIT_MAX_PER_LICENSE=20
+AUTH_SINGLE_SESSION_ENFORCED=true
+AUTH_SINGLE_SESSION_TTL_SECONDS=1800
+AUTH_SESSION_SECRET=change-me-long-random-secret
 WEB_LOADER_STORAGE_BUCKET=web-loader-files
 WEB_LOADER_STORAGE_PREFIX=web-loaders
 WEB_LOADER_STORAGE_PUBLIC=false
@@ -55,6 +58,13 @@ Set the same environment variables in Vercel project settings before deploying.
 Public client routes:
 - `/api/auth/validate` (license + HWID validation)
 - `/api/auth/web-loader/[slug]` (license + HWID validation and returns loader download URL)
+
+Single-session lock:
+- When `AUTH_SINGLE_SESSION_ENFORCED=true`, each license key allows only one active auth session window at a time.
+- Active window length is controlled by `AUTH_SINGLE_SESSION_TTL_SECONDS` (default `1800`).
+- During an active window, another auth attempt for the same key is denied with `409` and `Retry-After` header.
+- To continue the same session, clients must send `sessionId` and `sessionToken` from the previous success response.
+- Success responses from `/api/auth/validate` and `/api/auth/web-loader/[slug]` now include `sessionId`, `sessionToken`, and `sessionExpiresInSeconds`.
 
 Admin routes:
 - `/api/admin/upload-web-loader` (session-protected DLL upload to Supabase Storage, returns `downloadUrl`)

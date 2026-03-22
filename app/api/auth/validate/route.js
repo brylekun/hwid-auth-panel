@@ -15,7 +15,7 @@ export async function POST(req) {
       );
     }
 
-    const { licenseKey, hwidHash, deviceName } = parsed.data;
+    const { licenseKey, hwidHash, deviceName, sessionId, sessionToken } = parsed.data;
     const normalizedLicenseKey = normalizeLicenseKey(licenseKey);
     if (!normalizedLicenseKey) {
       return NextResponse.json(
@@ -29,6 +29,8 @@ export async function POST(req) {
       normalizedLicenseKey,
       hwidHash,
       deviceName,
+      sessionId,
+      sessionToken,
     });
 
     return NextResponse.json(

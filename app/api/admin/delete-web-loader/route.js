@@ -39,7 +39,7 @@ export async function POST(req) {
 
     const { data: previous, error: previousError } = await supabaseAdmin
       .from('web_loaders')
-      .select('id, name, slug, download_url, status')
+      .select('id, name, slug, download_url, status, storage_bucket, storage_path')
       .eq('id', loaderId)
       .maybeSingle();
 
@@ -50,16 +50,40 @@ export async function POST(req) {
       );
     }
 
-    const { error } = await supabaseAdmin
+    const { data: deleted, error } = await supabaseAdmin
       .from('web_loaders')
       .delete()
-      .eq('id', loaderId);
+      .eq('id', loaderId)
+      .select('id')
+      .maybeSingle();
 
     if (error) {
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 400 }
       );
+    }
+
+    if (!deleted) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            'Delete did not remove any row. Check Supabase delete policies or SUPABASE_SECRET_KEY configuration.',
+        },
+        { status: 500 }
+      );
+    }
+
+    let storageCleanupError = null;
+    if (previous.storage_bucket && previous.storage_path) {
+      const { error: removeError } = await supabaseAdmin.storage
+        .from(previous.storage_bucket)
+        .remove([previous.storage_path]);
+
+      if (removeError) {
+        storageCleanupError = removeError.message || 'Unknown storage deletion error';
+      }
     }
 
     await writeAdminAuditLog({
@@ -72,12 +96,18 @@ export async function POST(req) {
         name: previous.name,
         status: previous.status,
         downloadUrl: previous.download_url,
+        storageBucket: previous.storage_bucket,
+        storagePath: previous.storage_path,
+        storageCleanupError,
       },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Web loader deleted',
+      message: storageCleanupError
+        ? `Web loader deleted, but storage cleanup failed: ${storageCleanupError}`
+        : 'Web loader deleted',
+      storageCleanupError,
     });
   } catch (error) {
     console.error('Delete web loader error:', error);

@@ -306,7 +306,7 @@ export default function WebLoadersTable({
       }
 
       onWebLoaderDeleted(loaderId);
-      pushToast('Web loader deleted');
+      pushToast(data.message || 'Web loader deleted');
     } catch {
       pushToast('Network error while deleting web loader', 'error');
     } finally {
