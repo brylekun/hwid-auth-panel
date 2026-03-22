@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   position: relative;
   max-width: 1480px;
   margin: 0 auto;
@@ -1937,6 +1937,44 @@
   font-size: 0.75rem;
 }
 
+.shaMetaItem {
+  margin-top: 6px;
+}
+.shaMetaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.shaMetaHeader .mobileLabel,
+.shaMetaHeader .drawerLabel {
+  margin: 0;
+}
+.shaMetaValue,
+.shaDrawerValue {
+  margin-top: 6px;
+  color: #d7e6ff;
+  font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.73rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+.shaDrawerValue {
+  border: 1px solid rgba(132, 158, 202, 0.24);
+  border-radius: 10px;
+  padding: 8px 9px;
+  background: rgba(10, 20, 36, 0.72);
+}
+.shaCopyBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
 .deviceActionSingle {
   display: flex;
   justify-content: flex-start;
@@ -2103,3 +2141,7 @@
   border-color: rgba(244, 158, 177, 0.62);
   background: linear-gradient(180deg, rgba(108, 40, 56, 0.9), rgba(80, 28, 42, 0.94));
 }
+
+
+
+

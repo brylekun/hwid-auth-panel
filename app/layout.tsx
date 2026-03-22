@@ -25,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
+        suppressHydrationWarning
         className={`${sora.variable} ${jetbrainsMono.variable} antialiased`}
       >
         {children}

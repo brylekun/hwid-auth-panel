@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useRef, useState } from 'react';
 import {
@@ -105,8 +105,16 @@ export default function WebLoadersTable({
     }
   }
 
+  function getEndpointPath(slug: string) {
+    return `/api/auth/web-loader/${slug}`;
+  }
+
   function getEndpoint(slug: string) {
-    return `${window.location.origin}/api/auth/web-loader/${slug}`;
+    const endpointPath = getEndpointPath(slug);
+    if (typeof window === 'undefined') {
+      return endpointPath;
+    }
+    return `${window.location.origin}${endpointPath}`;
   }
 
   async function createWebLoader(event: React.FormEvent<HTMLFormElement>) {
@@ -610,15 +618,33 @@ export default function WebLoadersTable({
                 <p className={styles.mobileLabel}>Download URL:</p>
                 <p className={styles.expiryInlineValue}>
                   {loader.storage_bucket && loader.storage_path
-                    ? `Generated per auth request via ${getEndpoint(loader.slug)}`
+                    ? `Generated per auth request via ${getEndpointPath(loader.slug)}`
                     : loader.download_url}
                 </p>
               </div>
-              <div className={styles.licenseCardMetaItem}>
-                <p className={styles.mobileLabel}>Expected SHA-256:</p>
-                <p className={styles.expiryInlineValue}>{loader.expected_sha256 || 'Not set'}</p>
+              <div className={`${styles.licenseCardMetaItem} ${styles.shaMetaItem}`}>
+                <div className={styles.shaMetaHeader}>
+                  <p className={styles.mobileLabel}>Expected SHA-256:</p>
+                  {loader.expected_sha256 ? (
+                    <button
+                      type="button"
+                      className={`${styles.copyBtn} ${styles.shaCopyBtn}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void copyText(loader.expected_sha256 || '', 'Expected SHA-256 copied');
+                      }}
+                      title="Copy expected SHA-256"
+                      aria-label="Copy expected SHA-256"
+                    >
+                      <Copy size={13} strokeWidth={2} />
+                    </button>
+                  ) : null}
+                </div>
+                <p className={`${styles.expiryInlineValue} ${styles.shaMetaValue}`}>
+                  {loader.expected_sha256 || 'Not set'}
+                </p>
+              </div>
             </div>
-          </div>
 
             <div className={styles.actionGroup} onClick={(event) => event.stopPropagation()}>
               <button
@@ -823,7 +849,7 @@ export default function WebLoadersTable({
                 <p className={styles.drawerLabel}>Download URL</p>
                 <p className={styles.drawerValue}>
                   {selectedDetails.storage_bucket && selectedDetails.storage_path
-                    ? `Generated per auth request via ${getEndpoint(selectedDetails.slug)}`
+                    ? `Generated per auth request via ${getEndpointPath(selectedDetails.slug)}`
                     : selectedDetails.download_url}
                 </p>
               </div>
@@ -842,12 +868,29 @@ export default function WebLoadersTable({
                 </div>
               ) : null}
               <div className={styles.drawerItem}>
-                <p className={styles.drawerLabel}>Expected SHA-256</p>
-                <p className={styles.drawerValue}>{selectedDetails.expected_sha256 || 'Not set'}</p>
+                <div className={styles.shaMetaHeader}>
+                  <p className={styles.drawerLabel}>Expected SHA-256</p>
+                  {selectedDetails.expected_sha256 ? (
+                    <button
+                      type="button"
+                      className={`${styles.copyBtn} ${styles.shaCopyBtn}`}
+                      onClick={() =>
+                        void copyText(selectedDetails.expected_sha256 || '', 'Expected SHA-256 copied')
+                      }
+                      title="Copy expected SHA-256"
+                      aria-label="Copy expected SHA-256"
+                    >
+                      <Copy size={13} strokeWidth={2} />
+                    </button>
+                  ) : null}
+                </div>
+                <p className={`${styles.drawerValue} ${styles.shaDrawerValue}`}>
+                  {selectedDetails.expected_sha256 || 'Not set'}
+                </p>
               </div>
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>API Endpoint</p>
-                <p className={styles.drawerValue}>{getEndpoint(selectedDetails.slug)}</p>
+                <p className={styles.drawerValue}>{getEndpointPath(selectedDetails.slug)}</p>
               </div>
             </div>
           </aside>
@@ -856,3 +899,5 @@ export default function WebLoadersTable({
     </section>
   );
 }
+
+
