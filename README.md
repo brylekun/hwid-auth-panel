@@ -16,6 +16,7 @@ AUTH_RATE_LIMIT_MAX_PER_LICENSE=20
 AUTH_SINGLE_SESSION_ENFORCED=true
 AUTH_SINGLE_SESSION_TTL_SECONDS=1800
 AUTH_SINGLE_SESSION_IDLE_TIMEOUT_SECONDS=120
+AUTH_EXPIRY_STARTS_ON_FIRST_LOGIN=true
 AUTH_SESSION_SECRET=change-me-long-random-secret
 AUTH_SINGLE_SESSION_ALLOW_LEGACY_SAME_HWID=true
 WEB_LOADER_STORAGE_BUCKET=web-loader-files
@@ -74,6 +75,10 @@ Single-session lock:
 - For strict one-app-per-key behavior, set `AUTH_SINGLE_SESSION_ALLOW_LEGACY_SAME_HWID=false`.
 - Keep session alive while app is running by calling `/api/auth/session/heartbeat` periodically.
 - Release lock immediately on logout/app shutdown by calling `/api/auth/session/release`.
+
+License expiry behavior:
+- When `AUTH_EXPIRY_STARTS_ON_FIRST_LOGIN=true`, a new key's expiration countdown starts on its first successful login (not at create time).
+- The panel `Expires At` input is treated as the intended duration from creation (for example, `24h`, `7d`, `30d`) and gets shifted to first-use time once activated.
 
 Admin routes:
 - `/api/admin/upload-web-loader` (session-protected DLL upload to Supabase Storage, returns `downloadUrl`)

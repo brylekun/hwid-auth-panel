@@ -178,7 +178,7 @@ export default function CreateLicensePageForm({ embedded = false }: Props) {
 
         <div className={styles.field}>
           <label htmlFor="expiresAt" className={styles.label}>
-            Expires At <span className={styles.labelMuted}>(optional)</span>
+            Expires At <span className={styles.labelMuted}>(optional, starts on first login)</span>
           </label>
 
           <div className={styles.presetRow}>
