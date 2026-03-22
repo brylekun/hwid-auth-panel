@@ -5,6 +5,7 @@ export type LicenseRow = {
   max_devices: number;
   expires_at: string | null;
   created_at: string;
+  expiry_pending_activation?: boolean;
 };
 
 export type DeviceRow = {

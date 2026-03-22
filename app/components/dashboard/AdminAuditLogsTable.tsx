@@ -7,16 +7,42 @@ import type { AdminAuditLogRow } from './types';
 
 type Props = {
   logs: AdminAuditLogRow[];
+  onClearLogs: () => Promise<void>;
+  isClearingLogs?: boolean;
+  hasAnyLogs?: boolean;
 };
 
 const PAGE_SIZE = 6;
 
-export default function AdminAuditLogsTable({ logs }: Props) {
+export default function AdminAuditLogsTable({
+  logs,
+  onClearLogs,
+  isClearingLogs = false,
+  hasAnyLogs,
+}: Props) {
+  const canClearLogs = hasAnyLogs ?? logs.length > 0;
   const [showSensitive, setShowSensitive] = useState(false);
   const [query, setQuery] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [selectedDetails, setSelectedDetails] = useState<AdminAuditLogRow | null>(null);
+
+  async function handleClearLogs() {
+    if (isClearingLogs || !canClearLogs) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Clear all Admin Audit Logs? This will permanently delete them in Supabase.'
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    await onClearLogs();
+    setSelectedDetails(null);
+    setPage(1);
+  }
 
   const filtered = useMemo(() => {
     const q = normalize(query);
@@ -60,6 +86,15 @@ export default function AdminAuditLogsTable({ logs }: Props) {
 
         <div className={styles.sectionTools}>
           <span className={styles.metaPill}>{filtered.length} items</span>
+          <button
+            className={styles.btnDangerSmall}
+            onClick={() => void handleClearLogs()}
+            disabled={isClearingLogs || !canClearLogs}
+            type="button"
+            title="Clear all admin audit logs"
+          >
+            {isClearingLogs ? 'Clearing...' : 'Clear Logs'}
+          </button>
           <button
             className={styles.eyeBtn}
             onClick={() => setShowSensitive((prev) => !prev)}

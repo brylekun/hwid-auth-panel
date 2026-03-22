@@ -7,16 +7,40 @@ import type { AuthLogRow } from './types';
 
 type Props = {
   logs: AuthLogRow[];
+  onClearLogs: () => Promise<void>;
+  isClearingLogs?: boolean;
+  hasAnyLogs?: boolean;
 };
 
 const PAGE_SIZE = 6;
 
-export default function AuthLogsTable({ logs }: Props) {
+export default function AuthLogsTable({
+  logs,
+  onClearLogs,
+  isClearingLogs = false,
+  hasAnyLogs,
+}: Props) {
+  const canClearLogs = hasAnyLogs ?? logs.length > 0;
   const [showSensitive, setShowSensitive] = useState(false);
   const [query, setQuery] = useState('');
   const [resultFilter, setResultFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [selectedDetails, setSelectedDetails] = useState<AuthLogRow | null>(null);
+
+  async function handleClearLogs() {
+    if (isClearingLogs || !canClearLogs) {
+      return;
+    }
+
+    const confirmed = window.confirm('Clear all Recent Auth Logs? This will permanently delete them in Supabase.');
+    if (!confirmed) {
+      return;
+    }
+
+    await onClearLogs();
+    setSelectedDetails(null);
+    setPage(1);
+  }
 
   const filtered = useMemo(() => {
     const q = normalize(query);
@@ -59,6 +83,15 @@ export default function AuthLogsTable({ logs }: Props) {
 
         <div className={styles.sectionTools}>
           <span className={styles.metaPill}>{filtered.length} items</span>
+          <button
+            className={styles.btnDangerSmall}
+            onClick={() => void handleClearLogs()}
+            disabled={isClearingLogs || !canClearLogs}
+            type="button"
+            title="Clear all auth logs"
+          >
+            {isClearingLogs ? 'Clearing...' : 'Clear Logs'}
+          </button>
           <button
             className={styles.eyeBtn}
             onClick={() => setShowSensitive((prev) => !prev)}

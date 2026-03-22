@@ -81,12 +81,14 @@ export default function DashboardShell({
 }: Props) {
   const [licenses, setLicenses] = useState(initialLicenses);
   const [devices, setDevices] = useState(initialDevices);
-  const [logs] = useState(initialLogs);
-  const [adminAuditLogs] = useState(initialAdminAuditLogs);
+  const [logs, setLogs] = useState(initialLogs);
+  const [adminAuditLogs, setAdminAuditLogs] = useState(initialAdminAuditLogs);
   const [webLoaders, setWebLoaders] = useState(initialWebLoaders);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [referenceTime] = useState(() => Date.now());
+  const [isClearingAuthLogs, setIsClearingAuthLogs] = useState(false);
+  const [isClearingAdminAuditLogs, setIsClearingAdminAuditLogs] = useState(false);
 
   const generatedAt = useMemo(
     () =>
@@ -111,7 +113,12 @@ export default function DashboardShell({
     }, 3000);
   }
 
-  function handleDeviceReset(deviceId: string) {
+  function handleDeviceReset({ deviceId, hwidHash }: { deviceId: string; hwidHash?: string }) {
+    if (hwidHash) {
+      setDevices((prev) => prev.filter((device) => device.hwid_hash !== hwidHash));
+      return;
+    }
+
     setDevices((prev) => prev.filter((device) => device.id !== deviceId));
   }
 
@@ -123,6 +130,102 @@ export default function DashboardShell({
     setLicenses((prev) =>
       prev.map((license) => (license.id === updated.id ? updated : license))
     );
+  }
+
+  async function refreshLicenseData() {
+    try {
+      const response = await fetch('/api/admin/licenses', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        pushToast(data.message || 'Failed to sync licenses from database', 'error');
+        return false;
+      }
+
+      setLicenses(Array.isArray(data.licenses) ? data.licenses : []);
+      setDevices(Array.isArray(data.devices) ? data.devices : []);
+      return true;
+    } catch {
+      pushToast('Network error while syncing licenses', 'error');
+      return false;
+    }
+  }
+
+  async function refreshLogData() {
+    try {
+      const response = await fetch('/api/admin/logs', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        pushToast(data.message || 'Failed to sync logs from database', 'error');
+        return false;
+      }
+
+      setLogs(Array.isArray(data.logs) ? data.logs : []);
+      setAdminAuditLogs(Array.isArray(data.adminAuditLogs) ? data.adminAuditLogs : []);
+      return true;
+    } catch {
+      pushToast('Network error while syncing logs', 'error');
+      return false;
+    }
+  }
+
+  async function clearAuthLogs() {
+    if (isClearingAuthLogs) {
+      return;
+    }
+
+    setIsClearingAuthLogs(true);
+    try {
+      const response = await fetch('/api/admin/clear-auth-logs', {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        pushToast(data.message || 'Failed to clear auth logs', 'error');
+        return;
+      }
+
+      await refreshLogData();
+      pushToast(data.message || 'Auth logs cleared');
+    } catch {
+      pushToast('Network error while clearing auth logs', 'error');
+    } finally {
+      setIsClearingAuthLogs(false);
+    }
+  }
+
+  async function clearAdminAuditLogs() {
+    if (isClearingAdminAuditLogs) {
+      return;
+    }
+
+    setIsClearingAdminAuditLogs(true);
+    try {
+      const response = await fetch('/api/admin/clear-admin-audit-logs', {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        pushToast(data.message || 'Failed to clear admin audit logs', 'error');
+        return;
+      }
+
+      await refreshLogData();
+      pushToast(data.message || 'Admin audit logs cleared');
+    } catch {
+      pushToast('Network error while clearing admin audit logs', 'error');
+    } finally {
+      setIsClearingAdminAuditLogs(false);
+    }
   }
 
   function handleWebLoaderCreated(created: WebLoaderRow) {
@@ -381,6 +484,7 @@ return (
                   devices={devices}
                   onLicenseDeleted={handleLicenseDeleted}
                   onLicenseUpdated={handleLicenseUpdated}
+                  refreshLicenseData={refreshLicenseData}
                   pushToast={pushToast}
                 />
               </div>
@@ -390,6 +494,8 @@ return (
               <div className={styles.sectionPanel}>
                 <DevicesTable
                   devices={filteredData.devices}
+                  allDevices={devices}
+                  licenses={licenses}
                   onDeviceReset={handleDeviceReset}
                   pushToast={pushToast}
                 />
@@ -430,12 +536,20 @@ return (
                 />
 
                 <div className={styles.sectionPanel}>
-                  <AuthLogsTable logs={filteredData.logs} />
+                  <AuthLogsTable
+                    logs={filteredData.logs}
+                    onClearLogs={clearAuthLogs}
+                    isClearingLogs={isClearingAuthLogs}
+                    hasAnyLogs={logs.length > 0}
+                  />
                 </div>
 
                 <div className={styles.sectionPanel}>
                   <AdminAuditLogsTable
                     logs={filteredData.adminAuditLogs}
+                    onClearLogs={clearAdminAuditLogs}
+                    isClearingLogs={isClearingAdminAuditLogs}
+                    hasAnyLogs={adminAuditLogs.length > 0}
                   />
                 </div>
               </>

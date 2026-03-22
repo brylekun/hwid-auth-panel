@@ -34,7 +34,7 @@ export async function POST(req) {
       );
     }
 
-    const { deviceId } = parsed.data;
+    const { deviceId, hwidHash: requestedHwidHash } = parsed.data;
     const adminUsername = await getAdminUsernameFromRequest(req);
 
     const { data: previous, error: previousError } = await supabaseAdmin
@@ -50,10 +50,24 @@ export async function POST(req) {
       );
     }
 
+    const targetHwidHash = requestedHwidHash || previous.hwid_hash;
+
+    const { data: boundDevices, error: boundDevicesError } = await supabaseAdmin
+      .from('devices')
+      .select('id')
+      .eq('hwid_hash', targetHwidHash);
+
+    if (boundDevicesError) {
+      return NextResponse.json(
+        { success: false, message: boundDevicesError.message },
+        { status: 400 }
+      );
+    }
+
     const { error } = await supabaseAdmin
       .from('devices')
       .delete()
-      .eq('id', deviceId);
+      .eq('hwid_hash', targetHwidHash);
 
     if (error) {
       return NextResponse.json(
@@ -67,10 +81,11 @@ export async function POST(req) {
       actionType: 'reset_device',
       targetType: 'device',
       targetId: previous.id,
-      targetValue: previous.hwid_hash,
+      targetValue: targetHwidHash,
       metadata: {
         licenseId: previous.license_id,
         deviceName: previous.device_name,
+        removedBindings: Array.isArray(boundDevices) ? boundDevices.length : 0,
       },
     });
 

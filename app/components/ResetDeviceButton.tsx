@@ -6,11 +6,12 @@ import styles from './dashboard/dashboard.module.css';
 
 type Props = {
   deviceId: string;
-  onReset: (deviceId: string) => void;
+  hwidHash?: string;
+  onReset: (payload: { deviceId: string; hwidHash?: string }) => void;
   pushToast: (message: string, type?: 'success' | 'error') => void;
 };
 
-export default function ResetDeviceButton({ deviceId, onReset, pushToast }: Props) {
+export default function ResetDeviceButton({ deviceId, hwidHash, onReset, pushToast }: Props) {
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -21,7 +22,7 @@ export default function ResetDeviceButton({ deviceId, onReset, pushToast }: Prop
       const response = await fetch('/api/admin/reset-device', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceId }),
+        body: JSON.stringify({ deviceId, hwidHash }),
       });
 
       const data = await response.json();
@@ -30,7 +31,7 @@ export default function ResetDeviceButton({ deviceId, onReset, pushToast }: Prop
         return;
       }
 
-      onReset(deviceId);
+      onReset({ deviceId, hwidHash });
       pushToast('Device reset successfully');
     } catch {
       pushToast('Network error while resetting device', 'error');
@@ -68,7 +69,7 @@ export default function ResetDeviceButton({ deviceId, onReset, pushToast }: Prop
           >
             <h3 className={styles.modalTitle}>Reset Device</h3>
             <p className={styles.modalText}>
-              Remove this device binding from the license? The next validation may bind again if allowed.
+              Remove all bindings for this HWID across license history? The next validation may bind again if allowed.
             </p>
 
             <div className={styles.modalActions}>

@@ -127,7 +127,11 @@ export function formatLicenseDuration(expiresAt: string | null, createdAt: strin
   return formatDurationLabel(expiresMs - createdMs);
 }
 
-export function getLicenseExpiryInfo(expiresAt: string | null, referenceTime = Date.now()) {
+export function getLicenseExpiryInfo(
+  expiresAt: string | null,
+  referenceTime = Date.now(),
+  pendingActivation = false
+) {
   if (!expiresAt) {
     return {
       state: 'never' as const,
@@ -142,6 +146,14 @@ export function getLicenseExpiryInfo(expiresAt: string | null, referenceTime = D
       state: 'invalid' as const,
       label: 'Invalid expiration date',
       dateLabel: expiresAt,
+    };
+  }
+
+  if (pendingActivation) {
+    return {
+      state: 'pending' as const,
+      label: 'Starts on first login',
+      dateLabel: formatDateTime(expiresAt),
     };
   }
 

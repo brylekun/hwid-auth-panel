@@ -1,21 +1,29 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Cpu, Eye, EyeOff, MoreHorizontal, MonitorSmartphone, RotateCcw, ShieldCheck } from 'lucide-react';
+import { Cpu, Eye, EyeOff, MoreHorizontal, MonitorSmartphone, ShieldCheck } from 'lucide-react';
 import ResetDeviceButton from '../ResetDeviceButton';
 import { formatDateTime, normalize } from './format';
 import styles from './dashboard.module.css';
-import type { DeviceRow } from './types';
+import type { DeviceRow, LicenseRow } from './types';
 
 type Props = {
   devices: DeviceRow[];
-  onDeviceReset: (deviceId: string) => void;
+  allDevices?: DeviceRow[];
+  licenses: LicenseRow[];
+  onDeviceReset: (payload: { deviceId: string; hwidHash?: string }) => void;
   pushToast: (message: string, type?: 'success' | 'error') => void;
 };
 
 const PAGE_SIZE = 8;
 
-export default function DevicesTable({ devices, onDeviceReset, pushToast }: Props) {
+export default function DevicesTable({
+  devices,
+  allDevices,
+  licenses,
+  onDeviceReset,
+  pushToast,
+}: Props) {
   const [sortBy, setSortBy] = useState<'hwid_hash' | 'device_name' | 'status' | 'first_seen_at' | 'last_seen_at'>('last_seen_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [showSensitive, setShowSensitive] = useState(false);
@@ -23,11 +31,77 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [selectedDetails, setSelectedDetails] = useState<DeviceRow | null>(null);
+  const historySourceDevices = allDevices || devices;
+
+  const uniqueDevices = useMemo(() => {
+    const byHwid = new Map<string, DeviceRow>();
+
+    function parseMs(value: string) {
+      const ms = new Date(value).getTime();
+      return Number.isNaN(ms) ? null : ms;
+    }
+
+    function pickEarlier(left: string, right: string) {
+      const leftMs = parseMs(left);
+      const rightMs = parseMs(right);
+      if (leftMs !== null && rightMs !== null) {
+        return leftMs <= rightMs ? left : right;
+      }
+      if (leftMs !== null) return left;
+      if (rightMs !== null) return right;
+      return left <= right ? left : right;
+    }
+
+    function pickLater(left: string, right: string) {
+      const leftMs = parseMs(left);
+      const rightMs = parseMs(right);
+      if (leftMs !== null && rightMs !== null) {
+        return leftMs >= rightMs ? left : right;
+      }
+      if (leftMs !== null) return left;
+      if (rightMs !== null) return right;
+      return left >= right ? left : right;
+    }
+
+    for (const device of devices) {
+      const key = normalize(device.hwid_hash || '');
+      if (!key) {
+        continue;
+      }
+
+      const existing = byHwid.get(key);
+      if (!existing) {
+        byHwid.set(key, device);
+        continue;
+      }
+
+      const mergedLastSeen = pickLater(existing.last_seen_at, device.last_seen_at);
+      const mergedFirstSeen = pickEarlier(existing.first_seen_at, device.first_seen_at);
+
+      const representative =
+        mergedLastSeen === device.last_seen_at ? device : existing;
+
+      const mergedStatus =
+        existing.status === 'active' || device.status === 'active'
+          ? 'active'
+          : existing.status || device.status || 'inactive';
+
+      byHwid.set(key, {
+        ...representative,
+        first_seen_at: mergedFirstSeen,
+        last_seen_at: mergedLastSeen,
+        status: mergedStatus,
+        device_name: representative.device_name || existing.device_name || device.device_name || null,
+      });
+    }
+
+    return Array.from(byHwid.values());
+  }, [devices]);
 
   const filtered = useMemo(() => {
     const q = normalize(query);
 
-    return devices.filter((device) => {
+    return uniqueDevices.filter((device) => {
       const statusMatch = statusFilter === 'all' || (device.status || '').toLowerCase() === statusFilter;
       if (!statusMatch) return false;
 
@@ -35,7 +109,7 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
 
       return normalize(device.hwid_hash).includes(q) || normalize(device.device_name || '').includes(q);
     });
-  }, [devices, query, statusFilter]);
+  }, [uniqueDevices, query, statusFilter]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -48,6 +122,57 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const licenseKeyById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const license of licenses) {
+      map.set(license.id, license.license_key);
+    }
+    return map;
+  }, [licenses]);
+
+  const keysByHwid = useMemo(() => {
+    const map = new Map<string, Array<{ key: string; lastSeenAt: string }>>();
+
+    for (const device of historySourceDevices) {
+      const hwid = normalize(device.hwid_hash || '');
+      if (!hwid || !device.license_id) {
+        continue;
+      }
+
+      const keyValue = licenseKeyById.get(device.license_id) || `License ID: ${device.license_id}`;
+      const list = map.get(hwid) || [];
+      const existingIndex = list.findIndex((item) => item.key === keyValue);
+
+      if (existingIndex === -1) {
+        list.push({
+          key: keyValue,
+          lastSeenAt: device.last_seen_at,
+        });
+      } else {
+        const existingTime = new Date(list[existingIndex].lastSeenAt).getTime();
+        const currentTime = new Date(device.last_seen_at).getTime();
+        if (!Number.isNaN(currentTime) && (Number.isNaN(existingTime) || currentTime > existingTime)) {
+          list[existingIndex] = {
+            key: keyValue,
+            lastSeenAt: device.last_seen_at,
+          };
+        }
+      }
+
+      map.set(hwid, list);
+    }
+
+    const normalized = new Map<string, string[]>();
+    for (const [hwid, list] of map) {
+      const sortedList = [...list].sort(
+        (a, b) => new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime()
+      );
+      normalized.set(hwid, sortedList.map((item) => item.key));
+    }
+
+    return normalized;
+  }, [historySourceDevices, licenseKeyById]);
 
   function badgeClass(status: string | null) {
     return `${styles.badge} ${status === 'active' ? styles.active : styles.inactive}`;
@@ -221,7 +346,12 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
               onClick={(event) => event.stopPropagation()}
             >
               <div className={styles.deviceActionSingle}>
-                <ResetDeviceButton deviceId={device.id} onReset={onDeviceReset} pushToast={pushToast} />
+                <ResetDeviceButton
+                  deviceId={device.id}
+                  hwidHash={device.hwid_hash}
+                  onReset={onDeviceReset}
+                  pushToast={pushToast}
+                />
               </div>
             </div>
           </article>
@@ -265,6 +395,16 @@ export default function DevicesTable({ devices, onDeviceReset, pushToast }: Prop
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>Status</p>
                 <p className={styles.drawerValue}>{selectedDetails.status || 'inactive'}</p>
+              </div>
+
+              <div className={styles.drawerItem}>
+                <p className={styles.drawerLabel}>License Keys Used</p>
+                <p className={styles.drawerValue}>
+                  {(() => {
+                    const keys = keysByHwid.get(normalize(selectedDetails.hwid_hash || '')) || [];
+                    return keys.length > 0 ? keys.join(' | ') : 'No key history';
+                  })()}
+                </p>
               </div>
 
               <div className={styles.drawerItem}>

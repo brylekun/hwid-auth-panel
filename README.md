@@ -79,8 +79,13 @@ Single-session lock:
 License expiry behavior:
 - When `AUTH_EXPIRY_STARTS_ON_FIRST_LOGIN=true`, a new key's expiration countdown starts on its first successful login (not at create time).
 - The panel `Expires At` input is treated as the intended duration from creation (for example, `24h`, `7d`, `30d`) and gets shifted to first-use time once activated.
+- Unused keys are treated as `Pending first login` and are not auto-deactivated by expiry sync.
 
 Admin routes:
+- `/api/admin/licenses` (session-protected DB sync payload for license + device state)
+- `/api/admin/logs` (session-protected DB sync payload for recent auth and admin audit logs)
+- `/api/admin/clear-auth-logs` (session-protected clear-all action for `auth_logs`)
+- `/api/admin/clear-admin-audit-logs` (session-protected clear-all action for `admin_audit_logs`)
 - `/api/admin/upload-web-loader` (session-protected DLL upload to Supabase Storage, returns `downloadUrl`)
 - `/api/admin/reset-license-session` (session-protected active-session reset for a license key)
 

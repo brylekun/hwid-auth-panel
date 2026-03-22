@@ -23,12 +23,17 @@ type Props = {
   devices: DeviceRow[];
   onLicenseDeleted: (licenseId: string) => void;
   onLicenseUpdated: (license: LicenseRow) => void;
+  refreshLicenseData: () => Promise<boolean>;
   pushToast: (message: string, type?: 'success' | 'error') => void;
 };
 
 const PAGE_SIZE = 8;
 
 function getDerivedStatus(license: LicenseRow) {
+  if (license.expiry_pending_activation) {
+    return license.status === 'active' ? 'active' as const : 'inactive' as const;
+  }
+
   if (getLicenseExpiryInfo(license.expires_at).state === 'expired') {
     return 'expired' as const;
   }
@@ -59,6 +64,7 @@ export default function LicensesTable({
   devices,
   onLicenseDeleted,
   onLicenseUpdated,
+  refreshLicenseData,
   pushToast,
 }: Props) {
   const [sortBy, setSortBy] = useState<'license_key' | 'status' | 'max_devices' | 'expires_at' | 'created_at'>('created_at');
@@ -174,7 +180,10 @@ export default function LicensesTable({
         return;
       }
 
-      onLicenseUpdated(data.license);
+      const synced = await refreshLicenseData();
+      if (!synced && data.license) {
+        onLicenseUpdated(data.license);
+      }
       pushToast('License updated');
     } catch {
       pushToast('Network error while updating license', 'error');
@@ -200,7 +209,10 @@ export default function LicensesTable({
         return;
       }
 
-      onLicenseDeleted(licenseId);
+      const synced = await refreshLicenseData();
+      if (!synced) {
+        onLicenseDeleted(licenseId);
+      }
       pushToast('License deleted');
     } catch {
       pushToast('Network error while deleting license', 'error');
@@ -226,6 +238,7 @@ export default function LicensesTable({
         return;
       }
 
+      await refreshLicenseData();
       pushToast(data.message || 'License session reset');
     } catch {
       pushToast('Network error while resetting license session', 'error');
@@ -243,7 +256,7 @@ export default function LicensesTable({
     }
   }
 
-  function getExpiryBadgeClass(state: 'active' | 'expired' | 'never' | 'invalid') {
+  function getExpiryBadgeClass(state: 'active' | 'expired' | 'never' | 'invalid' | 'pending') {
     if (state === 'active') return `${styles.badge} ${styles.expiryActive}`;
     if (state === 'expired') return `${styles.badge} ${styles.expiryExpired}`;
     return `${styles.badge} ${styles.expiryNeutral}`;
@@ -251,6 +264,7 @@ export default function LicensesTable({
 
   function getExpirySummaryLabel(expiry: ReturnType<typeof getLicenseExpiryInfo>) {
     if (expiry.state === 'never') return 'Never';
+    if (expiry.state === 'pending') return 'Starts on first login';
     if (expiry.state === 'invalid') return 'Invalid expiration date';
     return expiry.label;
   }
@@ -455,7 +469,11 @@ export default function LicensesTable({
       <div className={styles.licenseCards}>
         {paged.map((license) => {
           const displayStatus = getDisplayStatus(license);
-          const expiry = getLicenseExpiryInfo(license.expires_at);
+          const expiry = getLicenseExpiryInfo(
+            license.expires_at,
+            Date.now(),
+            Boolean(license.expiry_pending_activation)
+          );
 
           return (
             <article
@@ -644,12 +662,18 @@ export default function LicensesTable({
                 <div className={styles.modalSection}>
                   <p className={styles.modalText}>Current expiry</p>
                   {(() => {
-                    const expiry = getLicenseExpiryInfo(selected.expires_at);
+                    const expiry = getLicenseExpiryInfo(
+                      selected.expires_at,
+                      Date.now(),
+                      Boolean(selected.expiry_pending_activation)
+                    );
                     return (
                       <div className={styles.expiryStack}>
                         <span className={getExpiryBadgeClass(expiry.state)}>
                           {expiry.state === 'active'
                             ? 'Active'
+                            : expiry.state === 'pending'
+                              ? 'Pending'
                             : expiry.state === 'expired'
                               ? 'Expired'
                               : 'Never'}
@@ -757,12 +781,18 @@ export default function LicensesTable({
               <div className={styles.drawerItem}>
                 <p className={styles.drawerLabel}>Expiry</p>
                 {(() => {
-                  const expiry = getLicenseExpiryInfo(selectedDetails.expires_at);
+                  const expiry = getLicenseExpiryInfo(
+                    selectedDetails.expires_at,
+                    Date.now(),
+                    Boolean(selectedDetails.expiry_pending_activation)
+                  );
                   return (
                     <div className={styles.expiryStack}>
                       <span className={getExpiryBadgeClass(expiry.state)}>
                         {expiry.state === 'active'
                           ? 'Active'
+                          : expiry.state === 'pending'
+                            ? 'Pending'
                           : expiry.state === 'expired'
                             ? 'Expired'
                             : 'Never'}
