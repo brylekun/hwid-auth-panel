@@ -16,6 +16,7 @@ AUTH_RATE_LIMIT_MAX_PER_LICENSE=20
 AUTH_SINGLE_SESSION_ENFORCED=true
 AUTH_SINGLE_SESSION_TTL_SECONDS=1800
 AUTH_SESSION_SECRET=change-me-long-random-secret
+AUTH_SINGLE_SESSION_ALLOW_LEGACY_SAME_HWID=true
 WEB_LOADER_STORAGE_BUCKET=web-loader-files
 WEB_LOADER_STORAGE_PREFIX=web-loaders
 WEB_LOADER_STORAGE_PUBLIC=false
@@ -65,6 +66,7 @@ Single-session lock:
 - During an active window, another auth attempt for the same key is denied with `409` and `Retry-After` header.
 - To continue the same session, clients must send `sessionId` and `sessionToken` from the previous success response.
 - Success responses from `/api/auth/validate` and `/api/auth/web-loader/[slug]` now include `sessionId`, `sessionToken`, and `sessionExpiresInSeconds`.
+- Compatibility: `AUTH_SINGLE_SESSION_ALLOW_LEGACY_SAME_HWID=true` lets non-handshake clients continue only from the same HWID while still blocking other HWIDs.
 
 Admin routes:
 - `/api/admin/upload-web-loader` (session-protected DLL upload to Supabase Storage, returns `downloadUrl`)
